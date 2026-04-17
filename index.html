@@ -17,6 +17,7 @@
     --accent:#ff3d8a;
     --theme:#39c2ff;
     --art:#ff3d8a;
+    --occ:#00a0d7;
     --tip-bg: rgba(15,15,15,0.95);
   }
   * { box-sizing: border-box; }
@@ -111,6 +112,7 @@
   #tip .meta { margin-top:2px; color:#aaa; font-size:11px; }
   .badge-theme { color: var(--theme); }
   .badge-art   { color: var(--art); }
+  .badge-occ   { color: var(--occ); }
   .zoom-label { position:absolute; bottom:8px; right:12px; z-index:20;
     font-size:11px; color:#888; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; }
 
@@ -164,6 +166,7 @@
   <div class="filters">
     <label><input type="checkbox" id="f_theme" checked> <span class="badge-theme">theme camps</span></label>
     <label><input type="checkbox" id="f_art" checked> <span class="badge-art">artworks</span></label>
+    <label><input type="checkbox" id="f_occ" checked> <span class="badge-occ">OCC</span></label>
     <input type="search" id="q" placeholder="search name or code…">
   </div>
 </header>
@@ -426,6 +429,7 @@
   // Filters + search
   const fTheme = document.getElementById("f_theme");
   const fArt   = document.getElementById("f_art");
+  const fOcc   = document.getElementById("f_occ");
   const q      = document.getElementById("q");
 
   // Pin/overlay nodes are re-used across searches
@@ -476,12 +480,14 @@
   }
 
   function applyFilter() {
-    const showTheme = fTheme.checked, showArt = fArt.checked;
+    const showTheme = fTheme.checked, showArt = fArt.checked, showOcc = fOcc.checked;
     const qs = q.value.trim().toLowerCase();
     const hits = [];
     for (const el of hotspots) {
       const sec = el.dataset.section;
-      const sectionOk = (sec === "theme" && showTheme) || (sec === "art" && showArt);
+      const sectionOk = (sec === "theme" && showTheme)
+                     || (sec === "art" && showArt)
+                     || (sec === "occ" && showOcc);
       const searchOk = !qs || el.dataset.code.toLowerCase().includes(qs)
                            || el.dataset.name.toLowerCase().includes(qs);
       const visible = sectionOk && searchOk;
