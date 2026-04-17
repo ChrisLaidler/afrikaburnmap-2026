@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AfrikaBurn 2026 — interactive map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<style>
+  :root {
+    --bg:#111;
+    --fg:#eee;
+    --accent:#ff3d8a;
+    --theme:#39c2ff;
+    --art:#ff3d8a;
+    --tip-bg: rgba(15,15,15,0.95);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); height:100%;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
+  header { padding: 10px 16px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+    border-bottom: 1px solid #333; background:var(--bg); z-index:10; position:relative; }
+  header h1 { font-size:16px; margin:0; font-weight:600; letter-spacing:0.02em; }
+  header .hint { font-size:12px; color:#aaa; }
+  header .filters { margin-left:auto; display:flex; gap:10px; align-items:center; }
+  header label { font-size:12px; color:#bbb; display:flex; gap:4px; align-items:center; cursor:pointer; }
+  header input[type=search] { background:#222; color:#eee; border:1px solid #444;
+    border-radius:4px; padding:4px 8px; font-size:12px; width:180px; }
+  .viewport {
+    position:absolute; inset: 53px 0 0 0;   /* below header */
+    overflow: hidden; background:#0a0a0a;
+    touch-action: none;
+    cursor: grab;
+  }
+  .viewport.dragging { cursor: grabbing; }
+  .map {
+    position:absolute; top:0; left:0;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+  .map img {
+    display:block; user-select:none; -webkit-user-drag:none;
+    image-rendering: auto;
+  }
+  .hotspot {
+    position:absolute; border-radius:4px; cursor:pointer;
+    border: 1.5px solid transparent;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .hotspot:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.9); }
+  .hotspot.filtered-out { opacity: 0.08; pointer-events: none; }
+  /* search-hit markers: big pulsing pin that sits just above the hotspot */
+  .hit-pin {
+    position:absolute; pointer-events:none; z-index: 5;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #fff200;
+    box-shadow: 0 0 0 3px #000, 0 0 0 5px #fff200, 0 0 16px 4px rgba(255,242,0,0.8);
+    animation: hit-pulse 1.1s ease-in-out infinite;
+    transform-origin: 50% 50%;
+  }
+  .hit-pin::after {
+    content: ""; position:absolute; left: 50%; top: 100%;
+    transform: translate(-50%, -2px);
+    border: 6px solid transparent;
+    border-top-color: #fff200;
+    filter: drop-shadow(0 1px 0 #000);
+  }
+  .hit-pin .hit-label {
+    position: absolute; left: 50%; bottom: 130%; transform: translateX(-50%);
+    background: #fff200; color:#111; font-weight:700; font-size:11px;
+    padding:2px 6px; border-radius:3px; white-space:nowrap;
+    border: 1.5px solid #000; letter-spacing: 0.04em;
+  }
+  @keyframes hit-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.18); }
+  }
+  .hit-overlay {
+    position:absolute; pointer-events:none; z-index: 4;
+    border: 3px solid #fff200;
+    border-radius: 6px;
+    background: rgba(255,242,0,0.18);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.6) inset, 0 0 12px rgba(255,242,0,0.7);
+  }
+  .zoom-ctl {
+    position:absolute; top: 68px; right: 12px; z-index: 20;
+    display:flex; flex-direction:column; gap:2px;
+    background:#1a1a1a; border:1px solid #333; border-radius:6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .zoom-ctl button {
+    background:transparent; color:#eee; border:none; width:32px; height:32px;
+    font-size:16px; cursor:pointer;
+  }
+  .zoom-ctl button:hover { background:#2a2a2a; }
+  .zoom-ctl button + button { border-top:1px solid #333; }
+  #tip {
+    position: fixed; pointer-events:none; z-index:100;
+    background: var(--tip-bg); color:#fff; padding:6px 10px; border-radius:6px;
+    font-size:13px; max-width:260px;
+    border: 1px solid #333; box-shadow: 0 4px 18px rgba(0,0,0,.5);
+    opacity:0; transition:opacity .1s;
+  }
+  #tip.show { opacity:1; }
+  #tip .code { color: var(--accent); font-weight:600; font-size:11px; letter-spacing:0.05em; }
+  #tip .name { margin-top:2px; font-size: 13px; }
+  #tip .meta { margin-top:2px; color:#aaa; font-size:11px; }
+  .badge-theme { color: var(--theme); }
+  .badge-art   { color: var(--art); }
+  .zoom-label { position:absolute; bottom:8px; right:12px; z-index:20;
+    font-size:11px; color:#888; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AfrikaBurn 2026 — hover to identify</h1>
+  <span class="hint">scroll to zoom · drag to pan</span>
+  <div class="filters">
+    <label><input type="checkbox" id="f_theme" checked> <span class="badge-theme">theme camps</span></label>
+    <label><input type="checkbox" id="f_art" checked> <span class="badge-art">artworks</span></label>
+    <input type="search" id="q" placeholder="search name or code…">
+  </div>
+</header>
+<div class="viewport" id="viewport">
+  <div class="map" id="map">
+    <img id="mapimg" src="2026_AfrikaBurnMap-scaled.jpg" alt="AfrikaBurn 2026 map" draggable="false">
+  </div>
+</div>
+<div class="zoom-ctl">
+  <button id="zin" title="Zoom in">+</button>
+  <button id="zout" title="Zoom out">−</button>
+  <button id="zreset" title="Reset">⌂</button>
+</div>
+<div class="zoom-label" id="zlabel">100%</div>
+<div id="tip" role="tooltip"></div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+  const data = DATA_INLINE;
+  const viewport = document.getElementById("viewport");
+  const mapDiv = document.getElementById("map");
+  const img = document.getElementById("mapimg");
+  const tip = document.getElementById("tip");
+  const zlabel = document.getElementById("zlabel");
+
+  const NAT_W = data.map_w || 2560;
+  const NAT_H = data.map_h || 1424;
+
+  // Set the map element to natural image size; we scale via transform.
+  img.style.width = NAT_W + "px";
+  img.style.height = NAT_H + "px";
+  mapDiv.style.width = NAT_W + "px";
+  mapDiv.style.height = NAT_H + "px";
+
+  // Hotspots in natural-pixel coords. They sit inside mapDiv so they inherit its transform.
+  const hotspots = [];
+  for (const e of data.entries) {
+    const el = document.createElement("div");
+    el.className = "hotspot " + e.section;
+    el.dataset.code = e.code;
+    el.dataset.name = e.name;
+    el.dataset.grid = e.grid;
+    el.dataset.section = e.section;
+    el.dataset.src = e.src || "ocr";
+    const padX = 4, padY = 4;
+    const nx = (e.x ?? 0) - padX;
+    const ny = (e.y ?? 0) - padY;
+    const nw = Math.max(20, (e.w ?? 24)) + padX*2;
+    const nh = Math.max(16, (e.h ?? 18)) + padY*2;
+    el.style.left = nx + "px";
+    el.style.top  = ny + "px";
+    el.style.width  = nw + "px";
+    el.style.height = nh + "px";
+    mapDiv.appendChild(el);
+    hotspots.push(el);
+
+    el.addEventListener("mouseenter", showTip);
+    el.addEventListener("mousemove", moveTip);
+    el.addEventListener("mouseleave", hideTip);
+    // tap to show on touch
+    el.addEventListener("click", (ev) => { showTip(ev); ev.stopPropagation(); });
+  }
+
+  // Pan/zoom state
+  let scl = 1, tx = 0, ty = 0;
+  const MIN_SCALE = () => fitScale();
+  const MAX_SCALE = 8;
+
+  function fitScale() {
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    return Math.min(vw / NAT_W, vh / NAT_H);
+  }
+
+  function apply() {
+    mapDiv.style.transform = `translate(${tx}px, ${ty}px) scale(${scl})`;
+    zlabel.textContent = Math.round(scl / fitScale() * 100) + "%";
+    // keep search pins same pixel size as map scales
+    if (typeof updateHitScale === "function") updateHitScale();
+  }
+
+  function clampPan() {
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    const cw = NAT_W * scl, ch = NAT_H * scl;
+    // If map smaller than viewport on an axis, center it.
+    if (cw <= vw) tx = (vw - cw) / 2;
+    else tx = Math.min(0, Math.max(vw - cw, tx));
+    if (ch <= vh) ty = (vh - ch) / 2;
+    else ty = Math.min(0, Math.max(vh - ch, ty));
+  }
+
+  function resetView() {
+    scl = fitScale();
+    tx = ty = 0;
+    clampPan();
+    apply();
+  }
+
+  function zoomAt(clientX, clientY, factor) {
+    const rect = viewport.getBoundingClientRect();
+    const vx = clientX - rect.left, vy = clientY - rect.top;
+    // map-space point under pointer before zoom
+    const mx = (vx - tx) / scl, my = (vy - ty) / scl;
+    const ns = Math.max(MIN_SCALE(), Math.min(MAX_SCALE, scl * factor));
+    if (ns === scl) return;
+    scl = ns;
+    tx = vx - mx * scl;
+    ty = vy - my * scl;
+    clampPan();
+    apply();
+  }
+
+  // Wheel zoom
+  viewport.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    // trackpad pinch (ctrlKey) gives larger deltaY — normalize a bit
+    const factor = Math.exp(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.0015));
+    zoomAt(ev.clientX, ev.clientY, factor);
+  }, { passive: false });
+
+  // Buttons
+  document.getElementById("zin").addEventListener("click", () => {
+    const r = viewport.getBoundingClientRect();
+    zoomAt(r.left + r.width/2, r.top + r.height/2, 1.4);
+  });
+  document.getElementById("zout").addEventListener("click", () => {
+    const r = viewport.getBoundingClientRect();
+    zoomAt(r.left + r.width/2, r.top + r.height/2, 1/1.4);
+  });
+  document.getElementById("zreset").addEventListener("click", resetView);
+
+  // Drag-to-pan (mouse)
+  let dragging = false, dragStart = null;
+  viewport.addEventListener("mousedown", (ev) => {
+    // don't pan when clicking a hotspot (let it handle click)
+    if (ev.target.classList.contains("hotspot")) return;
+    dragging = true;
+    dragStart = { x: ev.clientX - tx, y: ev.clientY - ty };
+    viewport.classList.add("dragging");
+    ev.preventDefault();
+  });
+  window.addEventListener("mousemove", (ev) => {
+    if (!dragging) return;
+    tx = ev.clientX - dragStart.x;
+    ty = ev.clientY - dragStart.y;
+    clampPan();
+    apply();
+  });
+  window.addEventListener("mouseup", () => {
+    dragging = false;
+    viewport.classList.remove("dragging");
+  });
+
+  // Touch: 1 finger pan, 2 fingers pinch
+  let touchState = null;
+  viewport.addEventListener("touchstart", (ev) => {
+    if (ev.touches.length === 1) {
+      const t = ev.touches[0];
+      touchState = { mode: "pan", x: t.clientX - tx, y: t.clientY - ty };
+    } else if (ev.touches.length === 2) {
+      const [a, b] = ev.touches;
+      const mx = (a.clientX + b.clientX) / 2, my = (a.clientY + b.clientY) / 2;
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      touchState = { mode: "pinch", mx, my, d, scl };
+    }
+  }, { passive: true });
+  viewport.addEventListener("touchmove", (ev) => {
+    if (!touchState) return;
+    if (touchState.mode === "pan" && ev.touches.length === 1) {
+      const t = ev.touches[0];
+      tx = t.clientX - touchState.x;
+      ty = t.clientY - touchState.y;
+      clampPan(); apply();
+      ev.preventDefault();
+    } else if (touchState.mode === "pinch" && ev.touches.length === 2) {
+      const [a, b] = ev.touches;
+      const d2 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const factor = d2 / touchState.d;
+      // anchor: initial midpoint
+      const ns = Math.max(MIN_SCALE(), Math.min(MAX_SCALE, touchState.scl * factor));
+      const rect = viewport.getBoundingClientRect();
+      const vx = touchState.mx - rect.left, vy = touchState.my - rect.top;
+      const mxmap = (vx - tx) / scl, mymap = (vy - ty) / scl;
+      scl = ns;
+      tx = vx - mxmap * scl;
+      ty = vy - mymap * scl;
+      clampPan(); apply();
+      ev.preventDefault();
+    }
+  }, { passive: false });
+  viewport.addEventListener("touchend", () => { touchState = null; });
+
+  // Double-click / double-tap zooms in
+  viewport.addEventListener("dblclick", (ev) => {
+    if (ev.target.classList.contains("hotspot")) return;
+    zoomAt(ev.clientX, ev.clientY, 2);
+  });
+
+  // Tooltip
+  function showTip(ev) {
+    const el = ev.currentTarget;
+    const code = el.dataset.code, name = el.dataset.name, grid = el.dataset.grid,
+          section = el.dataset.section, src = el.dataset.src;
+    tip.innerHTML = `
+      <div class="code">${code} · ${grid} · <span class="badge-${section}">${section}</span></div>
+      <div class="name">${escapeHtml(name)}</div>
+      ${src === "grid" ? `<div class="meta">approximate position (grid fallback)</div>` : ""}
+    `;
+    tip.classList.add("show");
+    moveTip(ev);
+  }
+  function moveTip(ev) {
+    const evt = ev.touches ? ev.touches[0] : ev;
+    const x = evt.clientX, y = evt.clientY;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let tpx = x + 14, tpy = y + 14;
+    if (tpx + tw > vw - 8) tpx = x - tw - 14;
+    if (tpy + th > vh - 8) tpy = y - th - 14;
+    tip.style.left = tpx + "px";
+    tip.style.top  = tpy + "px";
+  }
+  function hideTip() { tip.classList.remove("show"); }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  // Hide tip on click outside / drag start
+  viewport.addEventListener("pointerdown", (ev) => {
+    if (!ev.target.classList.contains("hotspot")) hideTip();
+  });
+
+  // Filters + search
+  const fTheme = document.getElementById("f_theme");
+  const fArt   = document.getElementById("f_art");
+  const q      = document.getElementById("q");
+
+  // Pin/overlay nodes are re-used across searches
+  const hitOverlays = [];   // yellow rectangle overlays (one per hit)
+  const hitPins     = [];   // pulsing pin markers (one per hit)
+
+  function clearHits() {
+    for (const o of hitOverlays) o.remove();
+    for (const p of hitPins) p.remove();
+    hitOverlays.length = 0;
+    hitPins.length = 0;
+  }
+
+  function markHits(hits) {
+    clearHits();
+    for (const el of hits) {
+      // overlay on the hotspot
+      const ov = document.createElement("div");
+      ov.className = "hit-overlay";
+      ov.style.left   = (parseFloat(el.style.left) - 2) + "px";
+      ov.style.top    = (parseFloat(el.style.top)  - 2) + "px";
+      ov.style.width  = (parseFloat(el.style.width)  + 4) + "px";
+      ov.style.height = (parseFloat(el.style.height) + 4) + "px";
+      mapDiv.appendChild(ov);
+      hitOverlays.push(ov);
+      // pulsing pin above the hotspot (natural-pixel sized; we undo transform scale so pin stays readable)
+      const pin = document.createElement("div");
+      pin.className = "hit-pin";
+      const label = document.createElement("span");
+      label.className = "hit-label";
+      label.textContent = el.dataset.code;
+      pin.appendChild(label);
+      // anchor: centered horizontally above the hotspot; vertical offset in natural px (~14px)
+      const cx = parseFloat(el.style.left) + parseFloat(el.style.width)/2;
+      const top = parseFloat(el.style.top) - 26;
+      pin.style.left = (cx - 13) + "px";   // pin is 26px; center it
+      pin.style.top  = top + "px";
+      mapDiv.appendChild(pin);
+      hitPins.push(pin);
+    }
+    updateHitScale();
+  }
+
+  // Keep pins visually constant size regardless of map zoom.
+  function updateHitScale() {
+    const inv = 1 / scl;
+    for (const p of hitPins) p.style.transform = `scale(${inv})`;
+  }
+
+  function applyFilter() {
+    const showTheme = fTheme.checked, showArt = fArt.checked;
+    const qs = q.value.trim().toLowerCase();
+    const hits = [];
+    for (const el of hotspots) {
+      const sec = el.dataset.section;
+      const sectionOk = (sec === "theme" && showTheme) || (sec === "art" && showArt);
+      const searchOk = !qs || el.dataset.code.toLowerCase().includes(qs)
+                           || el.dataset.name.toLowerCase().includes(qs);
+      const visible = sectionOk && searchOk;
+      el.classList.toggle("filtered-out", !visible);
+      if (qs && visible) hits.push(el);
+    }
+    markHits(hits);
+    // If exactly one hit, fly to it. If a few hits, frame them.
+    if (hits.length >= 1 && hits.length <= 12) frameHits(hits);
+  }
+
+  function frameHits(hits) {
+    // Compute bounding box of hit hotspots in natural coords
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const el of hits) {
+      const x = parseFloat(el.style.left), y = parseFloat(el.style.top);
+      const w = parseFloat(el.style.width), h = parseFloat(el.style.height);
+      if (x < minX) minX = x; if (y < minY) minY = y;
+      if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
+    }
+    const pad = 80; // natural-pixel padding around the hit region
+    minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+    const rw = maxX - minX, rh = maxY - minY;
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    // Target scale: fit region, but don't zoom out below current fit, or too far in
+    const targetScale = Math.min(vw / rw, vh / rh);
+    const minS = fitScale();
+    const ns = Math.max(minS, Math.min(MAX_SCALE, targetScale));
+    scl = ns;
+    // Center the region
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    tx = vw / 2 - cx * scl;
+    ty = vh / 2 - cy * scl;
+    clampPan();
+    apply();
+  }
+
+  fTheme.addEventListener("change", applyFilter);
+  fArt.addEventListener("change", applyFilter);
+  q.addEventListener("input", () => {
+    applyFilter();
+    // reflect query in URL hash so it's shareable
+    const v = q.value.trim();
+    history.replaceState(null, "", v ? "#q=" + encodeURIComponent(v) : "#");
+  });
+
+  // Honor ?q= / #q= on load
+  function readHash() {
+    const h = location.hash.replace(/^#/, "");
+    const m = h.match(/(?:^|&)q=([^&]*)/);
+    if (m) { q.value = decodeURIComponent(m[1]); applyFilter(); }
+  }
+
+  // Init once image loads (for accurate clamping — actually we use NAT_W/H so can init now)
+  function init() { resetView(); readHash(); }
+  if (img.complete) init(); else img.addEventListener("load", init);
+  window.addEventListener("resize", () => {
+    // keep same logical zoom (relative to fit), then clamp
+    const old_rel = scl / fitScale();
+    scl = fitScale() * old_rel;
+    clampPan();
+    apply();
+  });
+})();
+</script>
+</body>
+</html>
