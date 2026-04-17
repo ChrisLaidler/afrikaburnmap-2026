@@ -191,13 +191,19 @@
 
 <div id="ios-help">
   <div class="panel">
-    <h3>Save to home screen</h3>
-    <p>To use this map offline:</p>
-    <ol>
-      <li>Tap the <strong>Share</strong> button <span style="opacity:.7">(square with an up-arrow)</span> at the bottom of Safari.</li>
-      <li>Scroll and tap <strong>Add to Home Screen</strong>.</li>
-      <li>Tap <strong>Add</strong>. You'll get an icon that works offline.</li>
-    </ol>
+    <h3 id="ios-help-title">Save to home screen</h3>
+    <div id="ios-help-body">
+      <p>To use this map offline:</p>
+      <ol>
+        <li>Tap the <strong>Share</strong> button <span style="opacity:.7">(square with an up-arrow)</span> at the bottom of Safari.</li>
+        <li>Scroll and tap <strong>Add to Home Screen</strong>.</li>
+        <li>Tap <strong>Add</strong>. You'll get an icon that works offline.</li>
+      </ol>
+    </div>
+    <div id="ios-inapp-warning" style="display:none; background:rgba(255,61,138,0.15); border:1px solid #ff3d8a; border-radius:6px; padding:10px; margin:8px 0;">
+      <strong style="color:#ff9cc1;">You're in an in-app browser.</strong><br>
+      iOS only lets you install from <strong>Safari</strong> itself. Tap the <strong>⋯</strong> menu at the top and choose <strong>Open in Safari</strong>, then try Install again.
+    </div>
     <button id="ios-help-close">Got it</button>
   </div>
 </div>
@@ -566,14 +572,31 @@
   const iosHelp = document.getElementById("ios-help");
   const iosClose = document.getElementById("ios-help-close");
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches
                     || window.navigator.standalone === true;
+  // In-app browsers (Telegram, Facebook, Instagram, etc.) don't allow "Add to Home Screen"
+  // on iOS — iOS reserves that for Safari. Detect them so we can nudge the user to Safari.
+  const inAppMatch = /FBAN|FBAV|Instagram|Twitter|Line|LinkedIn|MicroMessenger|Snapchat|WhatsApp|TelegramBot|Telegram/i.test(ua);
+  // iOS WebKit in-app webviews often lack the standard "Version/X Safari/..." tail
+  const looksLikeIOSWebView = isIOS && !/Version\/\d+.*Safari\//.test(ua);
+  const isInAppBrowser = inAppMatch || looksLikeIOSWebView;
   const dismissedAt = parseInt(localStorage.getItem("ab-install-dismissed") || "0", 10);
   const dismissedRecently = (Date.now() - dismissedAt) < 1000*60*60*24*14; // 14 days
 
   function showBanner() {
     if (isStandalone || dismissedRecently) return;
+    // If we know the user is in an in-app browser (Telegram, FB, etc.),
+    // swap the banner copy up-front so they don't bounce off a broken Install button.
+    if (isInAppBrowser) {
+      const msg = banner.querySelector(".bmsg");
+      msg.innerHTML = "<strong>Save for offline</strong> — open this in " +
+        (isIOS ? "Safari" : "your browser") +
+        " first (tap <strong>⋯</strong> → <strong>Open in " +
+        (isIOS ? "Safari" : "browser") + "</strong>), then install from there.";
+      btn.textContent = "How?";
+    }
     banner.classList.add("show");
   }
   function dismiss() {
@@ -599,12 +622,22 @@
       if (outcome === "accepted") dismiss();
       else banner.classList.remove("show");
     } else if (isIOS) {
+      // Show the iOS instructions. If we think the user is in an in-app browser
+      // (Telegram, FB, etc.), also show the "Open in Safari" warning on top.
+      const warning = document.getElementById("ios-inapp-warning");
+      warning.style.display = isInAppBrowser ? "block" : "none";
+      iosHelp.classList.add("show");
+    } else if (isInAppBrowser) {
+      // Non-iOS in-app (e.g. Android Telegram). Similar fix: open in real browser.
+      document.getElementById("ios-help-title").textContent = "Open in your browser";
+      document.getElementById("ios-help-body").innerHTML =
+        "<p>In-app browsers can't install web apps. Tap the <strong>⋯</strong> menu and choose <strong>Open in browser</strong> (or Chrome/Firefox), then try Install again.</p>";
       iosHelp.classList.add("show");
     } else {
-      // Fallback: give generic text
-      iosHelp.querySelector("h3").textContent = "Save this page";
-      iosHelp.querySelector("ol").innerHTML =
-        "<li>Open your browser's menu.</li><li>Choose <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</li>";
+      // Fallback generic text
+      document.getElementById("ios-help-title").textContent = "Save this page";
+      document.getElementById("ios-help-body").innerHTML =
+        "<p>Open your browser's menu and choose <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</p>";
       iosHelp.classList.add("show");
     }
   });
