@@ -16,6 +16,10 @@ A hover-to-identify overlay for the official AfrikaBurn 2026 map. Instead of bou
 
 The site is three static files: `index.html`, `data.js`, and the map image. No framework, no build step.
 
+An optional high-resolution map image has also been extracted from the official 2026 Site Map PDF: https://www.afrikaburn.org/wp-content/uploads/2026/04/2026_Site_map.pdf
+
+The high-resolution view uses tiered downscaled raster images at lower zoom levels, then switches to the full-resolution image when zoomed in, to keep mobile rendering responsive.
+
 Placing the hotspots was the interesting bit. The map has ~180 camps and artworks, each labeled with a 2- or 3-letter code. Getting each hotspot onto the right spot required:
 
 - Manually transcribing the index (camp name → code → grid cell) from the printed sidebar

@@ -40,10 +40,10 @@
   .map {
     position:absolute; top:0; left:0;
     transform-origin: 0 0;
-    will-change: transform;
+    overflow: hidden;
   }
   .map img {
-    display:block; user-select:none; -webkit-user-drag:none;
+    display:block; position:absolute; user-select:none; -webkit-user-drag:none;
     image-rendering: auto;
   }
   .hotspot {
@@ -164,6 +164,7 @@
   <div class="filters">
     <label><input type="checkbox" id="f_theme" checked> <span class="badge-theme">theme camps</span></label>
     <label><input type="checkbox" id="f_art" checked> <span class="badge-art">artworks</span></label>
+    <label><input type="checkbox" id="f_highres"> high-res map</label>
     <input type="search" id="q" placeholder="search name or code…">
   </div>
 </header>
@@ -221,11 +222,106 @@
   const NAT_W = data.map_w || 2560;
   const NAT_H = data.map_h || 1424;
 
-  // Set the map element to natural image size; we scale via transform.
-  img.style.width = NAT_W + "px";
-  img.style.height = NAT_H + "px";
-  mapDiv.style.width = NAT_W + "px";
-  mapDiv.style.height = NAT_H + "px";
+  const MAP_SOURCES = {
+    standard: {
+      src: "2026_AfrikaBurnMap-scaled.jpg",
+      viewW: NAT_W,
+      viewH: NAT_H,
+      imageW: NAT_W,
+      imageH: NAT_H,
+      imageX: 0,
+      imageY: 0,
+      coordScaleX: 1,
+      coordScaleY: 1,
+      coordShiftX: 0,
+      coordShiftY: 0,
+    },
+    highres: {
+      src: "2026_Site_map_highres.jpg",
+      rasters: [
+        { id: "tiny", src: "2026_Site_map_highres_tiny.jpg", w: 620, h: 710, minZoom: 0 },
+        { id: "overview", src: "2026_Site_map_highres_overview.jpg", w: 1240, h: 1420, minZoom: 1.2 },
+        { id: "mobile", src: "2026_Site_map_highres_mobile.jpg", w: 2480, h: 2841, minZoom: 2 },
+        { id: "full", src: "2026_Site_map_highres.jpg", w: 4961, h: 5682, minZoom: 3 },
+      ],
+      viewW: 4961,
+      viewH: 5682,
+      imageW: 4961,
+      imageH: 5682,
+      imageX: 0,
+      imageY: 0,
+      coordScaleX: 2.454081197769008,
+      coordScaleY: 2.4505395215808625,
+      coordShiftX: 19.965682732040314,
+      coordShiftY: 13.300929537181313,
+    },
+  };
+  let currentMap = MAP_SOURCES.standard;
+  const mobileRasterQuery = window.matchMedia("(max-width: 700px), (pointer: coarse)");
+  const MOBILE_RASTER_HYSTERESIS = 0.1;
+  let currentRelativeZoom = 1;
+  let highresRasterIndex = 0;
+  let currentRaster = null;
+
+  function rasterForMap(source) {
+    if (!source.rasters || !mobileRasterQuery.matches) return null;
+    const maxIndex = source.rasters.length - 1;
+    highresRasterIndex = Math.min(highresRasterIndex, maxIndex);
+    while (
+      highresRasterIndex < maxIndex &&
+      currentRelativeZoom >= source.rasters[highresRasterIndex + 1].minZoom + MOBILE_RASTER_HYSTERESIS
+    ) {
+      highresRasterIndex++;
+    }
+    while (
+      highresRasterIndex > 0 &&
+      currentRelativeZoom < source.rasters[highresRasterIndex].minZoom - MOBILE_RASTER_HYSTERESIS
+    ) {
+      highresRasterIndex--;
+    }
+    return source.rasters[highresRasterIndex];
+  }
+
+  function updateMapRaster() {
+    currentRaster = rasterForMap(currentMap);
+    const nextSrc = currentRaster ? currentRaster.src : currentMap.src;
+    if (!img.src.endsWith(nextSrc)) img.src = nextSrc;
+    applyMapImageLayout();
+  }
+
+  function applyMapImageLayout() {
+    const imgW = currentRaster ? currentRaster.w : currentMap.imageW;
+    const imgH = currentRaster ? currentRaster.h : currentMap.imageH;
+    const imgScaleX = currentMap.imageW / imgW;
+    const imgScaleY = currentMap.imageH / imgH;
+    img.style.left = currentMap.imageX + "px";
+    img.style.top = currentMap.imageY + "px";
+    img.style.width = imgW + "px";
+    img.style.height = imgH + "px";
+    img.style.transformOrigin = "0 0";
+    img.style.transform = `scale(${imgScaleX}, ${imgScaleY})`;
+  }
+
+  function mapX(x) { return x * currentMap.coordScaleX + currentMap.coordShiftX; }
+  function mapY(y) { return y * currentMap.coordScaleY + currentMap.coordShiftY; }
+  function mapW(w) { return w * currentMap.coordScaleX; }
+  function mapH(h) { return h * currentMap.coordScaleY; }
+
+  function applyMapSourceLayout() {
+    updateMapRaster();
+    mapDiv.style.width = currentMap.viewW + "px";
+    mapDiv.style.height = currentMap.viewH + "px";
+  }
+  applyMapSourceLayout();
+  function handleMobileRasterChange() {
+    highresRasterIndex = 0;
+    updateMapRaster();
+  }
+  if (mobileRasterQuery.addEventListener) {
+    mobileRasterQuery.addEventListener("change", handleMobileRasterChange);
+  } else {
+    mobileRasterQuery.addListener?.(handleMobileRasterChange);
+  }
 
   // Hotspots in natural-pixel coords. They sit inside mapDiv so they inherit its transform.
   const hotspots = [];
@@ -237,23 +333,31 @@
     el.dataset.grid = e.grid;
     el.dataset.section = e.section;
     el.dataset.src = e.src || "ocr";
-    const padX = 4, padY = 4;
-    const nx = (e.x ?? 0) - padX;
-    const ny = (e.y ?? 0) - padY;
-    const nw = Math.max(20, (e.w ?? 24)) + padX*2;
-    const nh = Math.max(16, (e.h ?? 18)) + padY*2;
-    el.style.left = nx + "px";
-    el.style.top  = ny + "px";
-    el.style.width  = nw + "px";
-    el.style.height = nh + "px";
+    positionHotspot(el, e);
     mapDiv.appendChild(el);
-    hotspots.push(el);
+    hotspots.push({ el, entry: e });
 
     el.addEventListener("mouseenter", showTip);
     el.addEventListener("mousemove", moveTip);
     el.addEventListener("mouseleave", hideTip);
     // tap to show on touch
     el.addEventListener("click", (ev) => { showTip(ev); ev.stopPropagation(); });
+  }
+
+  function positionHotspot(el, e) {
+    const padX = 4, padY = 4;
+    const nx = (e.x ?? 0) - padX;
+    const ny = (e.y ?? 0) - padY;
+    const nw = Math.max(20, (e.w ?? 24)) + padX*2;
+    const nh = Math.max(16, (e.h ?? 18)) + padY*2;
+    el.style.left = mapX(nx) + "px";
+    el.style.top  = mapY(ny) + "px";
+    el.style.width  = mapW(nw) + "px";
+    el.style.height = mapH(nh) + "px";
+  }
+
+  function positionAllHotspots() {
+    for (const h of hotspots) positionHotspot(h.el, h.entry);
   }
 
   // Pan/zoom state
@@ -263,19 +367,21 @@
 
   function fitScale() {
     const vw = viewport.clientWidth, vh = viewport.clientHeight;
-    return Math.min(vw / NAT_W, vh / NAT_H);
+    return Math.min(vw / currentMap.viewW, vh / currentMap.viewH);
   }
 
   function apply() {
+    currentRelativeZoom = scl / fitScale();
+    updateMapRaster();
     mapDiv.style.transform = `translate(${tx}px, ${ty}px) scale(${scl})`;
-    zlabel.textContent = Math.round(scl / fitScale() * 100) + "%";
+    zlabel.textContent = Math.round(currentRelativeZoom * 100) + "%";
     // keep search pins same pixel size as map scales
     if (typeof updateHitScale === "function") updateHitScale();
   }
 
   function clampPan() {
     const vw = viewport.clientWidth, vh = viewport.clientHeight;
-    const cw = NAT_W * scl, ch = NAT_H * scl;
+    const cw = currentMap.viewW * scl, ch = currentMap.viewH * scl;
     // If map smaller than viewport on an axis, center it.
     if (cw <= vw) tx = (vw - cw) / 2;
     else tx = Math.min(0, Math.max(vw - cw, tx));
@@ -426,6 +532,7 @@
   // Filters + search
   const fTheme = document.getElementById("f_theme");
   const fArt   = document.getElementById("f_art");
+  const fHighRes = document.getElementById("f_highres");
   const q      = document.getElementById("q");
 
   // Pin/overlay nodes are re-used across searches
@@ -479,7 +586,8 @@
     const showTheme = fTheme.checked, showArt = fArt.checked;
     const qs = q.value.trim().toLowerCase();
     const hits = [];
-    for (const el of hotspots) {
+    for (const h of hotspots) {
+      const el = h.el;
       const sec = el.dataset.section;
       const sectionOk = (sec === "theme" && showTheme) || (sec === "art" && showArt);
       const searchOk = !qs || el.dataset.code.toLowerCase().includes(qs)
@@ -521,6 +629,14 @@
 
   fTheme.addEventListener("change", applyFilter);
   fArt.addEventListener("change", applyFilter);
+  fHighRes.addEventListener("change", () => {
+    currentMap = fHighRes.checked ? MAP_SOURCES.highres : MAP_SOURCES.standard;
+    highresRasterIndex = 0;
+    applyMapSourceLayout();
+    positionAllHotspots();
+    resetView();
+    applyFilter();
+  });
   q.addEventListener("input", () => {
     applyFilter();
     // reflect query in URL hash so it's shareable
@@ -537,7 +653,7 @@
 
   // Init once image loads (for accurate clamping — actually we use NAT_W/H so can init now)
   function init() { resetView(); readHash(); }
-  if (img.complete) init(); else img.addEventListener("load", init);
+  if (img.complete) init(); else img.addEventListener("load", init, { once: true });
   window.addEventListener("resize", () => {
     // keep same logical zoom (relative to fit), then clamp
     const old_rel = scl / fitScale();
