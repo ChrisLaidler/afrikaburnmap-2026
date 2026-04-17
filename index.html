@@ -19,6 +19,7 @@
     --art:#ff3d8a;
     --occ:#00a0d7;
     --plaza:#78d64b;
+    --support:#8d83ba;
     --toilet:#c9c9c9;
     --tip-bg: rgba(15,15,15,0.95);
   }
@@ -116,6 +117,7 @@
   .badge-art   { color: var(--art); }
   .badge-occ   { color: var(--occ); }
   .badge-plaza { color: var(--plaza); }
+  .badge-support { color: var(--support); }
   .badge-toilet { color: var(--toilet); }
   .zoom-label { position:absolute; bottom:8px; right:12px; z-index:20;
     font-size:11px; color:#888; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; }
@@ -172,6 +174,7 @@
     <label><input type="checkbox" id="f_art" checked> <span class="badge-art">artworks</span></label>
     <label><input type="checkbox" id="f_occ" checked> <span class="badge-occ">OCC</span></label>
     <label><input type="checkbox" id="f_plaza" checked> <span class="badge-plaza">plazas</span></label>
+    <label><input type="checkbox" id="f_support" checked> <span class="badge-support">support camps</span></label>
     <label><input type="checkbox" id="f_toilet" checked> <span class="badge-toilet">toilets</span></label>
     <input type="search" id="q" placeholder="search name or code…">
   </div>
@@ -440,6 +443,7 @@
   const fArt   = document.getElementById("f_art");
   const fOcc   = document.getElementById("f_occ");
   const fPlaza = document.getElementById("f_plaza");
+  const fSupport = document.getElementById("f_support");
   const fToilet = document.getElementById("f_toilet");
   const q      = document.getElementById("q");
 
@@ -493,7 +497,7 @@
   function applyFilter() {
     const showTheme = fTheme.checked, showArt = fArt.checked,
           showOcc = fOcc.checked, showPlaza = fPlaza.checked,
-          showToilet = fToilet.checked;
+          showSupport = fSupport.checked, showToilet = fToilet.checked;
     const qs = q.value.trim().toLowerCase();
     const hits = [];
     for (const el of hotspots) {
@@ -502,6 +506,7 @@
                      || (sec === "art" && showArt)
                      || (sec === "occ" && showOcc)
                      || (sec === "plaza" && showPlaza)
+                     || (sec === "support" && showSupport)
                      || (sec === "toilet" && showToilet);
       const searchOk = !qs || el.dataset.code.toLowerCase().includes(qs)
                            || el.dataset.name.toLowerCase().includes(qs);
@@ -544,6 +549,7 @@
   fArt.addEventListener("change", applyFilter);
   fOcc.addEventListener("change", applyFilter);
   fPlaza.addEventListener("change", applyFilter);
+  fSupport.addEventListener("change", applyFilter);
   fToilet.addEventListener("change", applyFilter);
   q.addEventListener("input", () => {
     applyFilter();
