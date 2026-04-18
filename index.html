@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>
   :root {
+    --header-h: 53px;
     --bg:#111;
     --fg:#eee;
     --accent:#ff3d8a;
@@ -26,16 +27,25 @@
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); height:100%;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
-  header { padding: 10px 16px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+  header { padding: 10px 16px; display:flex; gap:12px 16px; align-items:center; flex-wrap:wrap;
     border-bottom: 1px solid #333; background:var(--bg); z-index:10; position:relative; }
   header h1 { font-size:16px; margin:0; font-weight:600; letter-spacing:0.02em; }
+  header .header-title,
+  header .header-search { display:flex; gap:12px; align-items:center; }
+  header .header-title { order:1; }
+  header .filters { order:2; margin-left:auto; }
+  header .header-search { order:3; }
   header .hint { font-size:12px; color:#aaa; }
-  header .filters { margin-left:auto; display:flex; gap:10px; align-items:center; }
+  header .hint-search { display:none; }
+  header .hint-short,
+  header .label-short { display:none; }
+  header .filters { display:flex; gap:10px; align-items:center; }
   header label { font-size:12px; color:#bbb; display:flex; gap:4px; align-items:center; cursor:pointer; }
   header input[type=search] { background:#222; color:#eee; border:1px solid #444;
     border-radius:4px; padding:4px 8px; font-size:12px; width:180px; }
+  header .highres-toggle { white-space:nowrap; }
   .viewport {
-    position:absolute; inset: 53px 0 0 0;   /* below header */
+    position:absolute; inset: var(--header-h) 0 0 0;   /* below header */
     overflow: hidden; background:#0a0a0a;
     touch-action: none;
     cursor: grab;
@@ -100,7 +110,7 @@
     box-shadow: 0 0 0 2px rgba(0,0,0,0.6) inset, 0 0 12px rgba(255,242,0,0.7);
   }
   .zoom-ctl {
-    position:absolute; top: 68px; right: 12px; z-index: 20;
+    position:absolute; top: calc(var(--header-h) + 15px); right: 12px; z-index: 20;
     display:flex; flex-direction:column; gap:2px;
     background:#1a1a1a; border:1px solid #333; border-radius:6px;
     box-shadow: 0 2px 8px rgba(0,0,0,.3);
@@ -172,21 +182,106 @@
     padding:2px 6px; border-radius:4px; display:none;
   }
   .offline-badge.show { display:inline-block; }
+  @media (max-width: 700px) {
+    :root { --header-h: 94px; }
+    header {
+      padding:7px 8px;
+      gap:6px;
+    }
+    header .header-title,
+    header .header-search,
+    header .filters {
+      width:100%;
+    }
+    header .header-title { order:1; }
+    header .header-search { order:2; }
+    header .filters { order:3; }
+    header .header-title {
+      justify-content:space-between;
+    }
+    header .header-title h1 {
+      flex:1 1 auto;
+    }
+    header .highres-toggle {
+      flex:0 0 auto;
+      justify-content:flex-end;
+    }
+    header h1 {
+      font-size:14px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    header .highres-toggle,
+    header label,
+    header .hint {
+      font-size:11px;
+    }
+    header .hint-full,
+    header .hint-title,
+    header .label-full {
+      display:none;
+    }
+    header .hint-search {
+      display:inline;
+    }
+    header .hint-short,
+    header .label-short {
+      display:inline;
+    }
+    header .header-search {
+      justify-content:space-between;
+      margin-left:0;
+    }
+    header .hint {
+      flex:0 0 auto;
+      white-space:nowrap;
+    }
+    header input[type=search] {
+      flex:0 1 170px;
+      min-width:120px;
+      width:42vw;
+      max-width:180px;
+      padding:4px 7px;
+    }
+    header .filters {
+      margin-left:0;
+      justify-content:space-between;
+      gap:4px;
+    }
+    header label {
+      gap:3px;
+    }
+    header input[type=checkbox] {
+      width:13px;
+      height:13px;
+      margin:0;
+    }
+    .zoom-ctl {
+      top: calc(var(--header-h) + 10px);
+      right:8px;
+    }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>AfrikaBurn 2026 — hover to identify</h1>
-  <span class="hint">scroll to zoom · drag to pan</span>
-  <div class="filters">
-    <label><input type="checkbox" id="f_theme" checked> <span class="badge-theme">theme camps</span></label>
-    <label><input type="checkbox" id="f_art" checked> <span class="badge-art">artworks</span></label>
-    <label><input type="checkbox" id="f_occ" checked> <span class="badge-occ">OCC</span></label>
-    <label><input type="checkbox" id="f_plaza" checked> <span class="badge-plaza">plazas</span></label>
-    <label><input type="checkbox" id="f_support" checked> <span class="badge-support">support camps</span></label>
-    <label><input type="checkbox" id="f_toilet" checked> <span class="badge-toilet">toilets</span></label>
-    <label><input type="checkbox" id="f_highres" checked> high-res map</label>
+  <div class="header-title">
+    <h1>AfrikaBurn 2026</h1>
+    <span class="hint hint-title">hover to identify · scroll to zoom · drag to pan</span>
+    <label class="highres-toggle"><input type="checkbox" id="f_highres" checked> high-res map</label>
+  </div>
+  <div class="header-search">
+    <span class="hint hint-search"><span class="hint-short">zoom · drag</span></span>
     <input type="search" id="q" placeholder="search name or code…">
+  </div>
+  <div class="filters">
+    <label><input type="checkbox" id="f_theme" checked> <span class="badge-theme label-full">theme camps</span><span class="badge-theme label-short">Theme</span></label>
+    <label><input type="checkbox" id="f_art" checked> <span class="badge-art label-full">artworks</span><span class="badge-art label-short">Art</span></label>
+    <label><input type="checkbox" id="f_occ" checked> <span class="badge-occ label-full">OCC</span><span class="badge-occ label-short">OCC</span></label>
+    <label><input type="checkbox" id="f_support" checked> <span class="badge-support label-full">support camps</span><span class="badge-support label-short">Support</span></label>
+    <label><input type="checkbox" id="f_toilet" checked> <span class="badge-toilet label-full">toilets</span><span class="badge-toilet label-short">Toilets</span></label>
+    <label><input type="checkbox" id="f_plaza" checked> <span class="badge-plaza label-full">plazas</span><span class="badge-plaza label-short">Plaza</span></label>
   </div>
 </header>
 <div class="viewport" id="viewport">
@@ -239,6 +334,14 @@
   const img = document.getElementById("mapimg");
   const tip = document.getElementById("tip");
   const zlabel = document.getElementById("zlabel");
+  const header = document.querySelector("header");
+
+  function updateHeaderOffset() {
+    document.documentElement.style.setProperty("--header-h", header.offsetHeight + "px");
+  }
+  updateHeaderOffset();
+  if ("ResizeObserver" in window) new ResizeObserver(updateHeaderOffset).observe(header);
+  window.addEventListener("resize", updateHeaderOffset);
 
   const NAT_W = data.map_w || 2560;
   const NAT_H = data.map_h || 1424;
