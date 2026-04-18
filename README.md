@@ -22,8 +22,9 @@ Placing the hotspots was the interesting bit. The map has ~180 camps and artwork
 - Running OCR on the map image at multiple resolutions to locate the 3-letter camp codes
 - Detecting the stylized pink diamond markers for artworks visually (by color/shape) since OCR couldn't read the pink-on-pink text
 - Matching each code to its nearest detected position, with grid-cell fallback for the handful that couldn't be auto-located
+- Then manually checking and adjusting the places that needed correction
 
-About 97% of markers are pinned to their exact pixel positions on the map. The rest use the grid cell as an approximate location (tooltip says "approximate position" when that's the case).
+All current markers are pinned to pixel positions on the map. Some positions come from OCR-derived map regions, while audited entries have been manually checked and adjusted against the visual map.
 
 ## Running locally
 
