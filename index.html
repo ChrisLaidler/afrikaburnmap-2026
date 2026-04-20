@@ -441,6 +441,7 @@
   const detailsClose = document.getElementById("details-close");
   let detailsMode = "fit";
   let detailsDrag = null;
+  let detailsUserHeight = null;
 
   function updateHeaderOffset() {
     document.documentElement.style.setProperty("--header-h", header.offsetHeight + "px");
@@ -982,17 +983,23 @@
     const max = Math.max(min, window.innerHeight - 12);
     return Math.max(min, Math.min(max, h));
   }
-  function setMobileDetailsHeight(h) {
-    detailsPanel.style.setProperty("--details-mobile-height", `${Math.round(clampDetailsHeight(h))}px`);
+  function setMobileDetailsHeight(h, rememberUserHeight = false) {
+    const height = Math.round(clampDetailsHeight(h));
+    detailsPanel.style.setProperty("--details-mobile-height", `${height}px`);
+    if (rememberUserHeight) detailsUserHeight = height;
   }
   function fitMobileDetails() {
     if (!isMobileDetails() || !detailsPanel.classList.contains("open")) return;
+    if (detailsUserHeight !== null) {
+      setMobileDetailsHeight(detailsUserHeight);
+      return;
+    }
     requestAnimationFrame(() => {
       detailsPanel.classList.remove("full", "minimized");
       detailsBody.style.display = "";
       const natural = detailsGrip.offsetHeight + detailsCard.querySelector(".details-head").offsetHeight + detailsBody.scrollHeight + 14;
       const minFit = Math.min(260, Math.max(180, Math.round(window.innerHeight * 0.28)));
-      const maxFit = Math.max(minFit, Math.round(window.innerHeight * 0.68));
+      const maxFit = Math.max(minFit, Math.round(window.innerHeight * 0.5));
       setMobileDetailsHeight(Math.min(Math.max(natural, minFit), maxFit));
     });
   }
@@ -1114,7 +1121,7 @@
     } else {
       detailsMode = "fit";
       detailsPanel.classList.remove("full", "minimized");
-      setMobileDetailsHeight(height);
+      setMobileDetailsHeight(height, true);
       updateDetailsButtons();
     }
   }
