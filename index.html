@@ -48,8 +48,51 @@
   header .label-short { display:none; }
   header .filters { display:flex; gap:10px; align-items:center; }
   header label { font-size:12px; color:#bbb; display:flex; gap:4px; align-items:center; cursor:pointer; }
-  header input[type=search] { background:#222; color:#eee; border:1px solid #444;
-    border-radius:4px; padding:4px 8px; font-size:12px; width:180px; }
+  header .search-stack {
+    position:relative; display:flex; flex-direction:column;
+    width:180px; flex:0 0 auto;
+  }
+  header .search-stack input { background:#222; color:#eee; border:1px solid #444;
+    border-radius:4px; padding:0 7px; font-size:12px; width:100%; height:22px;
+    line-height:20px; display:block; margin:0;
+    appearance:none; -webkit-appearance:none; }
+  header .search-stack input::-webkit-search-decoration,
+  header .search-stack input::-webkit-search-cancel-button,
+  header .search-stack input::-webkit-search-results-button,
+  header .search-stack input::-webkit-search-results-decoration {
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .search-results {
+    position:absolute; top:calc(100% + 5px); left:0; right:0;
+    display:none; max-height:260px; overflow:auto; z-index:30;
+    background:rgba(18,18,18,0.98); border:1px solid #444; border-radius:6px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.42);
+  }
+  .search-results.open { display:block; }
+  .search-result {
+    width:100%; appearance:none; background:transparent; border:0;
+    color:#eee; text-align:left; padding:7px 9px; cursor:pointer;
+    display:grid; gap:2px;
+  }
+  .search-result:hover,
+  .search-result:focus-visible { background:rgba(255,255,255,0.08); outline:none; }
+  .search-result + .search-result { border-top:1px solid rgba(255,255,255,0.08); }
+  .search-result-top { display:flex; gap:8px; align-items:baseline; }
+  .search-result-code { font-size:11px; font-weight:700; letter-spacing:0.04em; color:#fff200; }
+  .search-result-name { font-size:12px; color:#f3f3f3; }
+  .search-result-meta { font-size:10px; color:#aaa; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .search-result-more {
+    padding:6px 9px; font-size:10px; color:#999; border-top:1px solid rgba(255,255,255,0.08);
+  }
+  button.search-result-more {
+    width:100%; appearance:none; background:transparent; border:0;
+    text-align:left; cursor:pointer;
+  }
+  button.search-result-more:hover,
+  button.search-result-more:focus-visible {
+    background:rgba(255,255,255,0.08); outline:none;
+  }
   header .highres-toggle,
   header .gps-toggle { white-space:nowrap; }
   header .gps-status {
@@ -125,6 +168,11 @@
     background: rgba(255,242,0,0.18);
     box-shadow: 0 0 0 2px rgba(0,0,0,0.6) inset, 0 0 12px rgba(255,242,0,0.7);
   }
+  .hit-overlay.selected {
+    border-color:#ff4d5e;
+    background:rgba(255,77,94,0.16);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.6) inset, 0 0 12px rgba(255,77,94,0.7);
+  }
   .user-pin {
     position:absolute; pointer-events:none; z-index:6; display:none;
     width:18px; height:18px; transform-origin:50% 50%;
@@ -185,17 +233,24 @@
   .bottom-status {
     position:absolute; bottom:8px; right:12px; z-index:20;
     display:flex; align-items:center; gap:8px;
+    background:rgba(222,222,222,0.9);
+    color:#111;
+    padding:2px 8px;
+    border-radius:4px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.35);
   }
   .zoom-label {
-    font-size:11px; color:#888; background:rgba(0,0,0,0.5);
-    padding:2px 6px; border-radius:4px;
+    font-size:11px; color:#111;
+    background:transparent;
+    padding:0;
+    border-radius:0;
   }
   .app-version {
-    font-size:10px; color:rgba(238,238,238,0.72); white-space:nowrap;
+    font-size:10px; color:#333; white-space:nowrap;
     letter-spacing:0.02em;
-    background:rgba(0,0,0,0.42);
-    padding:2px 6px;
-    border-radius:4px;
+    background:transparent;
+    padding:0;
+    border-radius:0;
   }
 
   .details-panel {
@@ -483,12 +538,16 @@
       flex:0 0 auto;
       white-space:nowrap;
     }
-    header input[type=search] {
-      flex:0 1 170px;
+    header .search-stack {
+      flex:0 0 auto;
       min-width:120px;
       width:42vw;
       max-width:180px;
-      padding:4px 7px;
+    }
+    header .search-stack input {
+      padding:0 6px;
+      height:21px;
+      line-height:19px;
     }
     header .filters {
       margin-left:0;
@@ -513,7 +572,7 @@
     }
     .app-version {
       font-size:9px;
-      color:rgba(238,238,238,0.68);
+      color:#333;
     }
     .about-backdrop { align-items:flex-end; padding:0; }
     .about-panel {
@@ -534,7 +593,10 @@
   </div>
   <div class="header-search">
     <span class="hint hint-search"><span class="hint-short">zoom · drag</span></span>
-    <input type="search" id="q" placeholder="search name or code…">
+    <div class="search-stack">
+      <input type="text" id="q" placeholder="search name or code…" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="search-results" id="search-results" aria-live="polite"></div>
+    </div>
   </div>
   <div class="filters">
     <label><input type="checkbox" id="f_theme" checked> <span class="badge-theme label-full">theme camps</span><span class="badge-theme label-short">Theme</span></label>
@@ -639,8 +701,8 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.21.8";
-  const APP_CACHE_VERSION = "v35";
+  const APP_VERSION = "2026.04.21.9";
+  const APP_CACHE_VERSION = "v36";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const oldWtfDetails = typeof OLD_WTF_DETAILS !== "undefined" ? OLD_WTF_DETAILS : { byCode: {} };
   const viewport = document.getElementById("viewport");
@@ -648,6 +710,7 @@
   const img = document.getElementById("mapimg");
   const tip = document.getElementById("tip");
   const zlabel = document.getElementById("zlabel");
+  const searchResults = document.getElementById("search-results");
   const header = document.querySelector("header");
   const gpsStatus = document.getElementById("gps-status");
   gpsStatus.setAttribute("role", "button");
@@ -731,13 +794,6 @@
       { x: 656.2, y: 991.1, lat: -32.5179048, lon: 19.9527811 },
       { x: 876.2, y: 816.3, lat: -32.5158630, lon: 19.9546365 },
     ],
-  };
-  const TEMP_GPS_TEST_SHIFT = {
-    enabled: true,
-    actualLat: -34.100465,
-    actualLon: 18.473639,
-    targetX: 988.7,
-    targetY: 882.9,
   };
 
   const MAP_SOURCES = {
@@ -1093,29 +1149,6 @@
     return {
       x: affine.xFromLon * lon + affine.xFromLat * lat + affine.xOffset,
       y: affine.yFromLon * lon + affine.yFromLat * lat + affine.yOffset,
-    };
-  }
-
-  function geoFromLogicalPoint(x, y) {
-    const affine = getGeoAffine();
-    if (!affine) return null;
-    const det = affine.xFromLon * affine.yFromLat - affine.xFromLat * affine.yFromLon;
-    if (Math.abs(det) < 1e-12) return null;
-    const rx = x - affine.xOffset;
-    const ry = y - affine.yOffset;
-    return {
-      lon: (rx * affine.yFromLat - affine.xFromLat * ry) / det,
-      lat: (affine.xFromLon * ry - rx * affine.yFromLon) / det,
-    };
-  }
-
-  function applyTemporaryGpsShift(lat, lon) {
-    if (!TEMP_GPS_TEST_SHIFT?.enabled) return { lat, lon };
-    const targetGeo = geoFromLogicalPoint(TEMP_GPS_TEST_SHIFT.targetX, TEMP_GPS_TEST_SHIFT.targetY);
-    if (!targetGeo) return { lat, lon };
-    return {
-      lat: lat + (targetGeo.lat - TEMP_GPS_TEST_SHIFT.actualLat),
-      lon: lon + (targetGeo.lon - TEMP_GPS_TEST_SHIFT.actualLon),
     };
   }
 
@@ -1543,67 +1576,12 @@
     apply();
   }
 
-  function logicalPointFromClient(clientX, clientY) {
-    const rect = viewport.getBoundingClientRect();
-    const vx = clientX - rect.left;
-    const vy = clientY - rect.top;
-    const mapPx = (vx - tx) / scl;
-    const mapPy = (vy - ty) / scl;
-    const logicalX = logicalXFromMap(mapPx);
-    const logicalY = logicalYFromMap(mapPy);
-    if (!Number.isFinite(logicalX) || !Number.isFinite(logicalY)) return null;
-    if (logicalX < 0 || logicalX > NAT_W || logicalY < 0 || logicalY > NAT_H) return null;
-    return {
-      x: logicalX,
-      y: logicalY,
-      mapX: mapPx,
-      mapY: mapPy,
-    };
-  }
-
-  async function copyTextToClipboard(text) {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-    const input = document.createElement("textarea");
-    input.value = text;
-    input.setAttribute("readonly", "");
-    input.style.position = "fixed";
-    input.style.opacity = "0";
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand("copy");
-    input.remove();
-  }
-
   function fmtCoord(n) {
     return (Math.round(n * 10) / 10).toFixed(1);
   }
 
   function isMapInteractiveTarget(target) {
     return target instanceof Element && Boolean(target.closest(".hotspot, .index-hotspot, .user-pin"));
-  }
-
-  async function handleMapCoordinatePick(ev) {
-    if (isMapInteractiveTarget(ev.target)) return;
-    const point = logicalPointFromClient(ev.clientX, ev.clientY);
-    if (!point) return;
-    const line = `"x": ${fmtCoord(point.x)}, "y": ${fmtCoord(point.y)}`;
-    try {
-      await copyTextToClipboard(line);
-      console.log("[map-pick]", line, { mapSource: currentMap.id, mapX: point.mapX, mapY: point.mapY });
-      zlabel.textContent = `copied ${fmtCoord(point.x)}, ${fmtCoord(point.y)}`;
-      window.setTimeout(() => {
-        zlabel.textContent = Math.round(currentRelativeZoom * 100) + "%";
-      }, 1800);
-    } catch (err) {
-      console.log("[map-pick]", line, { mapSource: currentMap.id, mapX: point.mapX, mapY: point.mapY, clipboardError: String(err) });
-      zlabel.textContent = `pick ${fmtCoord(point.x)}, ${fmtCoord(point.y)}`;
-      window.setTimeout(() => {
-        zlabel.textContent = Math.round(currentRelativeZoom * 100) + "%";
-      }, 1800);
-    }
   }
 
   // Wheel zoom
@@ -1701,10 +1679,6 @@
     cancelInitialGpsFrame();
     zoomAt(ev.clientX, ev.clientY, 2);
   });
-  viewport.addEventListener("click", (ev) => {
-    handleMapCoordinatePick(ev);
-  });
-
   // Tooltip
   function showTip(ev) {
     const el = ev.currentTarget;
@@ -1734,6 +1708,9 @@
   function hideTip() { tip.classList.remove("show"); }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
   function detailSection(label, text, extraClass = "") {
     if (!text) return "";
@@ -2091,7 +2068,7 @@
     apply();
   }
 
-  const USER_LOCATION_FRAME_SCALE = 2.4;
+  const USER_LOCATION_FRAME_SCALE = 3.5;
 
   function maybeFrameInitialGps(logicalPoint) {
     if (initialGpsFrameDone || !allowInitialGpsFrame) return;
@@ -2398,14 +2375,13 @@
     if (geoWatchId !== null) return;
     setGpsStatus("Waiting for GPS", "pending");
     geoWatchId = navigator.geolocation.watchPosition((position) => {
-      const shifted = applyTemporaryGpsShift(position.coords.latitude, position.coords.longitude);
       const motionHeading = normalizeHeadingDegrees(position.coords.heading);
       if (Number.isFinite(motionHeading)) {
         latestHeading = blendHeadingDegrees(latestHeading, motionHeading, 0.5);
       }
       latestGeoFix = {
-        lat: shifted.lat,
-        lon: shifted.lon,
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
         accuracy: position.coords.accuracy,
         speed: position.coords.speed,
         timestamp: position.timestamp,
@@ -2432,6 +2408,8 @@
   const hitPins     = [];
   let activeSearchHits = [];
   let activeDetailHighlight = null;
+  let searchResultsExpanded = false;
+  let lastSearchResultsQuery = "";
 
   function clearHits() {
     for (const o of hitOverlays) o.remove();
@@ -2443,12 +2421,23 @@
   function refreshHighlights(extraHits = []) {
     clearHits();
     const seen = new Set();
-    const overlays = [];
-    for (const el of [...activeSearchHits, ...extraHits, activeDetailHighlight].filter(Boolean)) {
+    for (const el of [...activeSearchHits, ...extraHits].filter(Boolean)) {
+      if (el === activeDetailHighlight) continue;
       if (seen.has(el)) continue;
       seen.add(el);
       const ov = document.createElement("div");
       ov.className = "hit-overlay";
+      ov.style.left   = (parseFloat(el.style.left) - 2) + "px";
+      ov.style.top    = (parseFloat(el.style.top)  - 2) + "px";
+      ov.style.width  = (parseFloat(el.style.width)  + 4) + "px";
+      ov.style.height = (parseFloat(el.style.height) + 4) + "px";
+      mapDiv.appendChild(ov);
+      hitOverlays.push(ov);
+    }
+    if (activeDetailHighlight) {
+      const el = activeDetailHighlight;
+      const ov = document.createElement("div");
+      ov.className = "hit-overlay selected";
       ov.style.left   = (parseFloat(el.style.left) - 2) + "px";
       ov.style.top    = (parseFloat(el.style.top)  - 2) + "px";
       ov.style.width  = (parseFloat(el.style.width)  + 4) + "px";
@@ -2463,6 +2452,96 @@
   function updateHitScale() {
     const inv = 1 / scl;
     for (const p of hitPins) p.style.transform = `scale(${inv})`;
+  }
+
+  function scoreSearchHit(el, qs) {
+    const code = (el.dataset.code || "").toLowerCase();
+    const name = (el.dataset.name || "").toLowerCase();
+    const grid = (el.dataset.grid || "").toLowerCase();
+    const tags = (el.dataset.tags || "").toLowerCase();
+    const section = (el.dataset.section || "").toLowerCase();
+    const tokens = qs.split(/\s+/).filter(Boolean);
+    let score = 0;
+
+    if (code === qs) score += 1200;
+    if (name === qs) score += 1100;
+    if (grid === qs) score += 1000;
+    if (tags.split(/\s+/).includes(qs)) score += 850;
+    if (code.startsWith(qs)) score += 760;
+    if (name.startsWith(qs)) score += 700;
+    if (grid.startsWith(qs)) score += 620;
+    if (new RegExp(`\\b${escapeRegex(qs)}`).test(name)) score += 560;
+    if (name.includes(qs)) score += 420;
+    if (tags.includes(qs)) score += 320;
+    if (section.includes(qs)) score += 220;
+
+    for (const token of tokens) {
+      if (code === token) score += 220;
+      else if (code.startsWith(token)) score += 110;
+      else if (code.includes(token)) score += 60;
+      if (name === token) score += 180;
+      else if (new RegExp(`\\b${escapeRegex(token)}`).test(name)) score += 120;
+      else if (name.includes(token)) score += 55;
+      if (tags.split(/\s+/).includes(token)) score += 90;
+      else if (tags.includes(token)) score += 40;
+      if (grid === token) score += 140;
+      else if (grid.startsWith(token)) score += 70;
+    }
+
+    return score;
+  }
+
+  function renderSearchResults(hits, qs) {
+    if (!qs) {
+      searchResultsExpanded = false;
+      lastSearchResultsQuery = "";
+      searchResults.innerHTML = "";
+      searchResults.classList.remove("open");
+      return;
+    }
+    if (qs !== lastSearchResultsQuery) {
+      searchResultsExpanded = false;
+      lastSearchResultsQuery = qs;
+    }
+    if (!hits.length) {
+      searchResults.innerHTML = '<div class="search-result-more">No matches</div>';
+      searchResults.classList.add("open");
+      return;
+    }
+    const ranked = hits
+      .map((el) => ({ el, score: scoreSearchHit(el, qs) }))
+      .sort((a, b) => b.score - a.score || a.el.dataset.name.localeCompare(b.el.dataset.name));
+    const shown = searchResultsExpanded ? ranked : ranked.slice(0, 10);
+    searchResults.innerHTML = shown.map(({ el }, index) => `
+      <button type="button" class="search-result" data-result-index="${index}">
+        <span class="search-result-top">
+          <span class="search-result-code">${escapeHtml(el.dataset.code)}</span>
+          <span class="search-result-name">${escapeHtml(el.dataset.name)}</span>
+        </span>
+        <span class="search-result-meta">
+          <span>${escapeHtml(el.dataset.grid)}</span>
+          <span class="badge-${escapeHtml(el.dataset.section)}">${escapeHtml(el.dataset.section)}</span>
+        </span>
+      </button>
+    `).join("") + (!searchResultsExpanded && ranked.length > shown.length
+      ? `<button type="button" class="search-result-more" data-expand-search-results>${ranked.length - shown.length} more matches</button>`
+      : "");
+    for (const button of searchResults.querySelectorAll(".search-result")) {
+      button.addEventListener("click", () => {
+        const target = shown[Number(button.dataset.resultIndex)]?.el;
+        if (!target) return;
+        openDetails(target, isMobileDetails() ? "half" : "fit");
+        frameHits([target]);
+      });
+    }
+    const expandButton = searchResults.querySelector("[data-expand-search-results]");
+    if (expandButton) {
+      expandButton.addEventListener("click", () => {
+        searchResultsExpanded = true;
+        renderSearchResults(hits, qs);
+      });
+    }
+    searchResults.classList.add("open");
   }
 
   function applyFilter() {
@@ -2488,6 +2567,7 @@
     }
     activeSearchHits = hits;
     refreshHighlights();
+    renderSearchResults(hits, qs);
     // If exactly one hit, fly to it. If a few hits, frame them.
     if (hits.length >= 1 && hits.length <= 12) frameHits(hits);
   }
