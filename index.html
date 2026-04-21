@@ -1555,20 +1555,36 @@
       if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
     }
     const singleHit = hits.length === 1;
-    const pad = singleHit ? 260 : 80; // natural-pixel padding around the hit region
+    const pad = singleHit ? 220 : 80; // natural-pixel padding around the hit region
     minX -= pad; minY -= pad; maxX += pad; maxY += pad;
     const rw = maxX - minX, rh = maxY - minY;
     const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    let visibleW = vw;
+    let visibleH = vh;
+    let visibleCx = vw / 2;
+    let visibleCy = vh / 2;
+    if (detailsPanel.classList.contains("open")) {
+      const detailsRect = detailsCard.getBoundingClientRect();
+      if (isMobileDetails()) {
+        const bottomInset = Math.min(vh, Math.max(0, detailsRect.height));
+        visibleH = Math.max(120, vh - bottomInset);
+        visibleCy = visibleH / 2;
+      } else {
+        const rightInset = Math.min(vw, Math.max(0, detailsRect.width + 24));
+        visibleW = Math.max(120, vw - rightInset);
+        visibleCx = visibleW / 2;
+      }
+    }
     // Target scale: fit region, but don't zoom out below current fit, or too far in
-    const targetScale = Math.min(vw / rw, vh / rh);
+    const targetScale = Math.min(visibleW / rw, visibleH / rh);
     const minS = fitScale();
-    const maxFrameScale = singleHit ? minS * 2.2 : MAX_SCALE;
+    const maxFrameScale = singleHit ? minS * 2.7 : MAX_SCALE;
     const ns = Math.max(minS, Math.min(maxFrameScale, targetScale));
     scl = ns;
     // Center the region
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    tx = vw / 2 - cx * scl;
-    ty = vh / 2 - cy * scl;
+    tx = visibleCx - cx * scl;
+    ty = visibleCy - cy * scl;
     clampPan();
     apply();
   }
