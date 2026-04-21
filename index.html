@@ -56,6 +56,14 @@
   header .gps-status.ready { color:#7de38f; }
   header .gps-status.warn { color:#ffb36b; }
   header .gps-status.error { color:#ff8f8f; }
+  header .about-btn {
+    background:#222; color:#ddd; border:1px solid #444; border-radius:4px;
+    padding:3px 8px; font-size:12px; cursor:pointer;
+  }
+  header .about-btn:hover { background:#2b2b2b; border-color:#666; }
+  header .app-version {
+    font-size:10px; color:#888; white-space:nowrap; letter-spacing:0.02em;
+  }
   .viewport {
     position:absolute; inset: var(--header-h) 0 0 0;   /* below header */
     overflow: hidden; background:#0a0a0a;
@@ -360,6 +368,45 @@
     padding:2px 6px; border-radius:4px; display:none;
   }
   .offline-badge.show { display:inline-block; }
+  .about-backdrop {
+    position:fixed; inset:0; z-index:115; display:none;
+    background:rgba(0,0,0,0.62);
+    align-items:center; justify-content:center; padding:18px;
+  }
+  .about-backdrop.open { display:flex; }
+  .about-panel {
+    width:min(560px, calc(100vw - 24px));
+    max-height:min(78vh, 720px);
+    background:rgba(18,18,18,0.98); color:#eee;
+    border:1px solid #333; border-radius:8px;
+    box-shadow:0 14px 40px rgba(0,0,0,0.5);
+    display:flex; flex-direction:column;
+  }
+  .about-head {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:12px 14px; border-bottom:1px solid #333;
+  }
+  .about-head h2 {
+    margin:0; font-size:18px; line-height:1.2;
+  }
+  .about-close {
+    background:#222; color:#eee; border:1px solid #444; border-radius:5px;
+    width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;
+  }
+  .about-close:hover { background:#2b2b2b; border-color:#666; }
+  .about-body {
+    padding:14px; overflow:auto; line-height:1.45; font-size:13px;
+  }
+  .about-body p { margin:0 0 12px; }
+  .about-links, .about-meta {
+    display:grid; gap:8px;
+  }
+  .about-links a { color:#9ed2ff; text-decoration:none; }
+  .about-links a:hover { text-decoration:underline; }
+  .about-meta {
+    margin-top:14px; padding-top:12px; border-top:1px solid #2c2c2c;
+    color:#bbb; font-size:12px;
+  }
   @media (max-width: 700px) {
     :root { --header-h: 94px; }
     header {
@@ -400,6 +447,8 @@
       margin-left:auto;
       text-align:right;
     }
+    header .about-btn { padding:2px 7px; font-size:11px; }
+    header .app-version { font-size:9px; }
     header .hint-full,
     header .hint-title,
     header .label-full {
@@ -444,6 +493,11 @@
       top: calc(var(--header-h) + 10px);
       right:8px;
     }
+    .about-backdrop { align-items:flex-end; padding:0; }
+    .about-panel {
+      width:100vw; max-height:78vh; border-radius:8px 8px 0 0;
+      border-left:0; border-right:0; border-bottom:0;
+    }
   }
 </style>
 </head>
@@ -455,6 +509,8 @@
     <label class="highres-toggle"><input type="checkbox" id="f_highres" checked> high-res map</label>
     <label class="gps-toggle"><input type="checkbox" id="f_locate" checked> GPS</label>
     <span class="gps-status" id="gps-status">GPS off</span>
+    <button type="button" class="about-btn" id="about-btn">About</button>
+    <span class="app-version" id="app-version">app — · cache —</span>
   </div>
   <div class="header-search">
     <span class="hint hint-search"><span class="hint-short">zoom · drag</span></span>
@@ -482,6 +538,30 @@
 <div class="zoom-label" id="zlabel">100%</div>
 <div class="offline-badge" id="offline-badge">✓ saved for offline</div>
 <div id="tip" role="tooltip"></div>
+
+<div class="about-backdrop" id="about-backdrop" aria-hidden="true">
+  <section class="about-panel" role="dialog" aria-modal="true" aria-labelledby="about-title">
+    <div class="about-head">
+      <h2 id="about-title">About this map</h2>
+      <button type="button" class="about-close" id="about-close" aria-label="Close about">×</button>
+    </div>
+    <div class="about-body">
+      <p>This interactive map is built from the official AfrikaBurn 2026 site map and the 2026 WTF Guide, with additional linking and offline-friendly navigation layered on top.</p>
+      <p>Developed by Chris Laidler from the Grease Monkeys.</p>
+      <p>The original interactive map project was created by Bernard Bravenboer from camp 404.</p>
+      <p>This is an independent helper tool. There are no guarantees, and some information may still be incomplete or incorrect, but care has been taken to make it as accurate and useful as possible.</p>
+      <div class="about-links">
+        <a href="https://www.afrikaburn.org/wp-content/uploads/2026/04/2026_Site_map.pdf" target="_blank" rel="noopener noreferrer">Official AfrikaBurn 2026 site map</a>
+        <a href="https://www.afrikaburn.org/binnekringblog/afrikaburn-2026-wtf/" target="_blank" rel="noopener noreferrer">Official AfrikaBurn 2026 WTF Guide</a>
+        <a href="https://github.com/bernardbravenboer/afrikaburnmap-2026" target="_blank" rel="noopener noreferrer">Original interactive map project</a>
+      </div>
+      <div class="about-meta">
+        <div id="about-version">App version: —</div>
+        <div id="about-cache-version">Cache version: —</div>
+      </div>
+    </div>
+  </section>
+</div>
 
 <aside class="details-panel" id="details-panel" aria-hidden="true">
   <div class="details-card" role="dialog" aria-labelledby="details-title">
@@ -536,6 +616,8 @@
 <script>
 (() => {
   const data = DATA_INLINE;
+  const APP_VERSION = "2026.04.21.3";
+  const APP_CACHE_VERSION = "v30";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const oldWtfDetails = typeof OLD_WTF_DETAILS !== "undefined" ? OLD_WTF_DETAILS : { byCode: {} };
   const viewport = document.getElementById("viewport");
@@ -548,6 +630,12 @@
   gpsStatus.setAttribute("role", "button");
   gpsStatus.setAttribute("aria-disabled", "true");
   gpsStatus.tabIndex = -1;
+  const aboutBtn = document.getElementById("about-btn");
+  const appVersion = document.getElementById("app-version");
+  const aboutBackdrop = document.getElementById("about-backdrop");
+  const aboutClose = document.getElementById("about-close");
+  const aboutVersion = document.getElementById("about-version");
+  const aboutCacheVersion = document.getElementById("about-cache-version");
   const detailsPanel = document.getElementById("details-panel");
   const detailsCard = detailsPanel.querySelector(".details-card");
   const detailsGrip = document.getElementById("details-grip");
@@ -560,6 +648,29 @@
   let detailsMode = "fit";
   let detailsDrag = null;
   let detailsUserHeight = null;
+
+  appVersion.textContent = `app ${APP_VERSION} · cache ${APP_CACHE_VERSION}`;
+  aboutVersion.textContent = `App version: ${APP_VERSION}`;
+  aboutCacheVersion.textContent = `Cache version: ${APP_CACHE_VERSION}`;
+
+  function openAbout() {
+    aboutBackdrop.classList.add("open");
+    aboutBackdrop.setAttribute("aria-hidden", "false");
+  }
+
+  function closeAbout() {
+    aboutBackdrop.classList.remove("open");
+    aboutBackdrop.setAttribute("aria-hidden", "true");
+  }
+
+  aboutBtn.addEventListener("click", openAbout);
+  aboutClose.addEventListener("click", closeAbout);
+  aboutBackdrop.addEventListener("click", (ev) => {
+    if (ev.target === aboutBackdrop) closeAbout();
+  });
+  window.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") closeAbout();
+  });
 
   function updateHeaderOffset() {
     document.documentElement.style.setProperty("--header-h", header.offsetHeight + "px");
