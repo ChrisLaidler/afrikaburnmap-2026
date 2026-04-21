@@ -521,16 +521,18 @@
   .schedule-backdrop {
     position:fixed; inset:0; z-index:112; display:none;
     background:rgba(0,0,0,0.78);
-    align-items:stretch; justify-content:stretch; padding:0;
+    align-items:center; justify-content:center; padding:18px;
   }
   .schedule-backdrop.open { display:flex; }
   .schedule-panel {
-    width:100vw;
-    height:100dvh;
+    width:min(1320px, calc(100vw - 36px));
+    height:min(88dvh, 920px);
     background:rgba(18,18,18,0.98); color:#eee;
-    border:0;
-    box-shadow:none;
+    border:1px solid #353535;
+    border-radius:10px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.45);
     display:flex; flex-direction:column;
+    overflow:hidden;
   }
   .schedule-head {
     padding:10px 14px 8px;
@@ -982,6 +984,14 @@
     .about-panel {
       width:100vw; max-height:78vh; border-radius:8px 8px 0 0;
       border-left:0; border-right:0; border-bottom:0;
+    }
+    .schedule-backdrop { align-items:stretch; justify-content:stretch; padding:0; }
+    .schedule-panel {
+      width:100vw;
+      height:100dvh;
+      border:0;
+      border-radius:0;
+      box-shadow:none;
     }
     .schedule-head { padding:10px 10px 8px; }
     .schedule-content { padding:10px 10px 8px; }
@@ -1871,8 +1881,11 @@
   let scheduleShowBurn = true;
   let scheduleTimelineNeedsMorningAnchor = true;
   let scheduleNowTimer = null;
+  let scheduleTimelineZoom = 1;
   const TIMELINE_START_MIN = 0;
   const TIMELINE_END_MIN = 24 * 60;
+  const SCHEDULE_TIMELINE_ZOOM_MIN = 0.6;
+  const SCHEDULE_TIMELINE_ZOOM_MAX = 3.4;
   const SCHEDULE_CATEGORY_FILTERS = [
     { key: "Burn", label: "Burn", shortLabel: "Burn" },
     { key: "Music", label: "Music", shortLabel: "Music" },
@@ -2077,12 +2090,16 @@
     return todayMatch?.date || occurrences[0]?.date || today;
   }
 
+  function baseTimelineHourPx() {
+    return window.matchMedia("(max-width: 700px)").matches ? 23 : 40;
+  }
+
   function timelineHourPx() {
-    return window.matchMedia("(max-width: 700px)").matches ? 23 : 28;
+    return baseTimelineHourPx() * scheduleTimelineZoom;
   }
 
   function timelineLanePx() {
-    return window.matchMedia("(max-width: 700px)").matches ? 22 : 24;
+    return window.matchMedia("(max-width: 700px)").matches ? 22 : 28;
   }
 
   function timelineLabelStepHours() {
@@ -2177,6 +2194,56 @@
     requestAnimationFrame(() => {
       scheduleContent.scrollLeft = targetLeft;
     });
+  }
+
+  function scheduleFilteredItemsForActiveDate() {
+    return scheduleItemsForCurrentFilters(scheduleData.byDate?.[activeScheduleDate] || []);
+  }
+
+  function scheduleTimelineAnchorFromClientX(clientX) {
+    const rect = scheduleContent.getBoundingClientRect();
+    const localX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const pxPerMinute = timelineHourPx() / 60;
+    const minutes = TIMELINE_START_MIN + (scheduleContent.scrollLeft + localX) / pxPerMinute;
+    return {
+      localX,
+      minutes: Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN, minutes)),
+    };
+  }
+
+  function applyScheduleTimelineAnchor(anchor) {
+    if (!anchor) return;
+    const pxPerMinute = timelineHourPx() / 60;
+    const target = Math.round((anchor.minutes - TIMELINE_START_MIN) * pxPerMinute - anchor.localX);
+    const maxScroll = Math.max(0, scheduleContent.scrollWidth - scheduleContent.clientWidth);
+    scheduleContent.scrollLeft = Math.max(0, Math.min(maxScroll, target));
+  }
+
+  function rerenderScheduleTimelineAtAnchor(anchor = null) {
+    if (activeScheduleView !== "timeline") return;
+    const items = scheduleFilteredItemsForActiveDate();
+    if (activeScheduleEventId && !items.some((item) => item.id === activeScheduleEventId)) {
+      activeScheduleEventId = null;
+    }
+    if (!activeScheduleEventId && items.length) {
+      activeScheduleEventId = items[0].id;
+    }
+    renderScheduleTimeline(items);
+    attachScheduleSelectionHandlers();
+    renderScheduleDetail(activeScheduleItem());
+    syncScheduleNowTimer();
+    requestAnimationFrame(() => {
+      if (anchor) applyScheduleTimelineAnchor(anchor);
+      else scrollScheduleSelectionIntoView();
+    });
+  }
+
+  function setScheduleTimelineZoom(nextZoom, anchorClientX = null) {
+    const clamped = Math.max(SCHEDULE_TIMELINE_ZOOM_MIN, Math.min(SCHEDULE_TIMELINE_ZOOM_MAX, nextZoom));
+    if (Math.abs(clamped - scheduleTimelineZoom) < 0.001) return;
+    const anchor = anchorClientX == null ? null : scheduleTimelineAnchorFromClientX(anchorClientX);
+    scheduleTimelineZoom = clamped;
+    rerenderScheduleTimelineAtAnchor(anchor);
   }
 
   function updateScheduleNowMarker() {
@@ -2555,6 +2622,13 @@
     renderSchedule();
     scrollScheduleSelectionIntoView();
   });
+  scheduleContent.addEventListener("wheel", (ev) => {
+    if (activeScheduleView !== "timeline" || !scheduleBackdrop.classList.contains("open")) return;
+    if (!ev.ctrlKey && !ev.metaKey) return;
+    ev.preventDefault();
+    const factor = Math.exp(-ev.deltaY * 0.0025);
+    setScheduleTimelineZoom(scheduleTimelineZoom * factor, ev.clientX);
+  }, { passive: false });
 
   const INDEX_COLUMNS = [
     {
