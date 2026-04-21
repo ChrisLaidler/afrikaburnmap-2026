@@ -383,7 +383,7 @@
     <h1>AfrikaBurn 2026</h1>
     <span class="hint hint-title">hover to identify · scroll to zoom · drag to pan</span>
     <label class="highres-toggle"><input type="checkbox" id="f_highres" checked> high-res map</label>
-    <label class="gps-toggle"><input type="checkbox" id="f_locate"> GPS</label>
+    <label class="gps-toggle"><input type="checkbox" id="f_locate" checked> GPS</label>
     <span class="gps-status" id="gps-status">GPS off</span>
   </div>
   <div class="header-search">
@@ -1613,6 +1613,9 @@
     if (!navigator.geolocation) {
       fLocate.disabled = true;
       setGpsStatus("GPS unavailable", "error");
+    }
+    if (navigator.geolocation && fLocate.checked) {
+      startGeolocationWatch();
     }
     resetView();
     readHash();
