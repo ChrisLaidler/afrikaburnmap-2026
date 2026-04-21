@@ -155,6 +155,42 @@
     padding:2px 6px; border-radius:4px; display:none;
   }
   .offline-badge.show { display:inline-block; }
+
+  /* pixel-art easter-egg sprites that wander across the viewport */
+  .sprite-layer {
+    position:absolute; inset:0;
+    pointer-events:none; overflow:hidden;
+    z-index: 6;
+  }
+  .sprite {
+    position:absolute;
+    will-change: transform;
+    opacity: 0;
+    animation: sprite-fade 0.4s ease-out forwards;
+  }
+  @keyframes sprite-fade { to { opacity: 1; } }
+  .sprite .bob { width:100%; height:100%; }
+  .sprite.bob-on .bob { animation: sprite-bob 0.55s ease-in-out infinite; }
+  .sprite .flipper { width:100%; height:100%; }
+  .sprite .flipper.mirror { transform: scaleX(-1); }
+  .sprite .sheet {
+    display:flex; width:200%; height:100%;
+    animation: sprite-frames infinite steps(2);
+  }
+  .sprite .sheet svg { flex: 0 0 50%; width:50%; height:100%; display:block; }
+  @keyframes sprite-frames { to { transform: translateX(-50%); } }
+  @keyframes sprite-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+  .sprite-toggle {
+    position:absolute; bottom:8px; left:150px; z-index:20;
+    background: rgba(0,0,0,0.45); color:#aaa;
+    border:1px solid #333; border-radius:4px;
+    font-size:11px; line-height:1;
+    padding:3px 7px; cursor:pointer; opacity:0.55;
+    font-family: inherit;
+  }
+  .sprite-toggle:hover { opacity:1; color:#fff; }
+  .sprite-toggle.off { color:#555; }
 </style>
 </head>
 <body>
@@ -171,7 +207,9 @@
   <div class="map" id="map">
     <img id="mapimg" src="2026_AfrikaBurnMap-scaled.jpg" alt="AfrikaBurn 2026 map" draggable="false">
   </div>
+  <div class="sprite-layer" id="sprite-layer"></div>
 </div>
+<button id="sprite-toggle" class="sprite-toggle" title="Toggle critters">✦ critters</button>
 <div class="zoom-ctl">
   <button id="zin" title="Zoom in">+</button>
   <button id="zout" title="Zoom out">−</button>
@@ -649,6 +687,247 @@
 
   // Hide banner if app becomes installed
   window.addEventListener("appinstalled", dismiss);
+})();
+</script>
+
+<script>
+// Pixel-art easter-egg sprites (T-Rex-game vibe): streakers, mutant vehicles, dust devils.
+// They wander across the viewport every 30-90s. Small toggle button lets the user disable them.
+(() => {
+  const layer = document.getElementById("sprite-layer");
+  const toggleBtn = document.getElementById("sprite-toggle");
+  if (!layer || !toggleBtn) return;
+
+  const OFF_KEY = "ab-sprites-off";
+  let enabled = localStorage.getItem(OFF_KEY) !== "1";
+  function syncToggle() {
+    toggleBtn.classList.toggle("off", !enabled);
+    toggleBtn.title = enabled ? "Hide critters" : "Show critters";
+  }
+  toggleBtn.addEventListener("click", () => {
+    enabled = !enabled;
+    if (enabled) localStorage.removeItem(OFF_KEY);
+    else localStorage.setItem(OFF_KEY, "1");
+    syncToggle();
+    if (!enabled) layer.querySelectorAll(".sprite").forEach(el => el.remove());
+    else if (!layer.querySelector(".sprite")) setTimeout(spawnRandom, 800);
+  });
+  syncToggle();
+
+  // Each frame is a grid of '#' (filled pixel) and '.' (empty). Kept tiny for charm.
+  const PIX = {
+    streaker_a: [
+      "....##.....",
+      "...####....",
+      "...####....",
+      "....##.....",
+      "...####....",
+      "..######...",
+      ".########..",
+      "..######...",
+      "...####....",
+      "...####....",
+      "...##.##...",
+      "..##...##..",
+      ".##.....##.",
+    ],
+    streaker_b: [
+      "....##.....",
+      "...####....",
+      "...####....",
+      "....##.....",
+      "...####....",
+      "..######...",
+      "..######...",
+      "..######...",
+      "...####....",
+      "...####....",
+      "....####...",
+      "...######..",
+      "..##..##...",
+    ],
+    artcar_a: [
+      ".........##......",
+      ".........##......",
+      ".......######....",
+      "......########...",
+      "......########...",
+      ".......######....",
+      ".........##......",
+      ".........##......",
+      ".##############..",
+      "################.",
+      "################.",
+      ".##############..",
+      "..##........##...",
+      ".####......####..",
+      ".####......####..",
+      "..##........##...",
+    ],
+    artcar_b: [
+      "..........##.....",
+      "..........##.....",
+      "........######...",
+      ".......########..",
+      ".......########..",
+      "........######...",
+      "..........##.....",
+      ".........##......",
+      ".##############..",
+      "################.",
+      "################.",
+      ".##############..",
+      "..##........##...",
+      ".####......####..",
+      ".####......####..",
+      "..##........##...",
+    ],
+    dust_a: [
+      "..##....",
+      ".####...",
+      "##..##..",
+      "#....#..",
+      "##..##..",
+      ".####...",
+      "..##....",
+      "..##....",
+      "..####..",
+      ".######.",
+      "..####..",
+    ],
+    dust_b: [
+      "...##...",
+      "..####..",
+      ".##..##.",
+      ".#....#.",
+      ".##..##.",
+      "..####..",
+      "...##...",
+      "...##...",
+      "..####..",
+      ".######.",
+      "..####..",
+    ],
+  };
+
+  function buildSVG(rows, color, scale) {
+    const h = rows.length, w = rows[0].length;
+    let rects = "";
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (rows[y][x] !== ".") {
+          // 1.02 avoids subpixel seams between neighboring rects
+          rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02"/>`;
+        }
+      }
+    }
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w*scale}" height="${h*scale}"
+      preserveAspectRatio="none"
+      style="fill:${color};display:block;shape-rendering:crispEdges;">${rects}</svg>`;
+  }
+
+  // Sprite definitions. yFromBottom is pixels above the viewport bottom.
+  const DEFS = [
+    {
+      kind: "streaker",
+      frames: ["streaker_a", "streaker_b"],
+      color: "#ececec",
+      scale: 3,
+      cycleMs: 160,          // fast leg-cycle
+      travelMs: [6500, 9000],
+      yFromBottom: [80, 140],
+      weight: 3,
+      bob: false,
+    },
+    {
+      kind: "artcar",
+      frames: ["artcar_a", "artcar_b"],
+      color: "#9a9a9a",
+      scale: 3,
+      cycleMs: 520,          // slow wobble
+      travelMs: [18000, 26000],
+      yFromBottom: [100, 170],
+      weight: 2,
+      bob: true,
+    },
+    {
+      kind: "dust",
+      frames: ["dust_a", "dust_b"],
+      color: "#b58d5c",
+      scale: 4,
+      cycleMs: 120,          // fast swirl
+      travelMs: [10000, 14000],
+      yFromBottom: [90, 200],
+      weight: 2,
+      bob: true,
+    },
+  ];
+
+  function pickDef() {
+    const total = DEFS.reduce((s, d) => s + d.weight, 0);
+    let r = Math.random() * total;
+    for (const d of DEFS) { r -= d.weight; if (r <= 0) return d; }
+    return DEFS[0];
+  }
+  function rand(range) { return range[0] + Math.random() * (range[1] - range[0]); }
+
+  function spawn(def) {
+    const vw = layer.clientWidth, vh = layer.clientHeight;
+    const rows = PIX[def.frames[0]];
+    const w = rows[0].length * def.scale;
+    const h = rows.length * def.scale;
+    // 50/50 direction
+    const rtl = Math.random() < 0.5;
+    const y = vh - rand(def.yFromBottom) - h;
+
+    const el = document.createElement("div");
+    el.className = "sprite" + (def.bob ? " bob-on" : "");
+    el.style.top = Math.max(8, y) + "px";
+    el.style.width = w + "px";
+    el.style.height = h + "px";
+
+    const bob = document.createElement("div");
+    bob.className = "bob";
+    const flip = document.createElement("div");
+    flip.className = "flipper" + (rtl ? " mirror" : "");
+    const sheet = document.createElement("div");
+    sheet.className = "sheet";
+    sheet.style.animationDuration = def.cycleMs + "ms";
+    sheet.innerHTML =
+      buildSVG(PIX[def.frames[0]], def.color, def.scale) +
+      buildSVG(PIX[def.frames[1]], def.color, def.scale);
+    flip.appendChild(sheet);
+    bob.appendChild(flip);
+    el.appendChild(bob);
+    layer.appendChild(el);
+
+    const startX = rtl ? vw + 20 : -w - 20;
+    const endX   = rtl ? -w - 40 : vw + 40;
+    el.style.left = startX + "px";
+    const duration = rand(def.travelMs);
+    const anim = el.animate(
+      [{ transform: "translateX(0)" }, { transform: `translateX(${endX - startX}px)` }],
+      { duration, easing: "linear", fill: "forwards" }
+    );
+    anim.addEventListener("finish", () => el.remove());
+    anim.addEventListener("cancel", () => el.remove());
+  }
+
+  function spawnRandom() {
+    if (!enabled) return;
+    if (document.hidden) return;
+    if (layer.querySelector(".sprite")) return;   // one at a time
+    spawn(pickDef());
+  }
+
+  function scheduleNext() {
+    // 25-75s between spawns
+    const delay = 25000 + Math.random() * 50000;
+    setTimeout(() => { spawnRandom(); scheduleNext(); }, delay);
+  }
+
+  // First critter shows up 6-14s after load so the user notices the fun.
+  setTimeout(() => { spawnRandom(); scheduleNext(); }, 6000 + Math.random() * 8000);
 })();
 </script>
 
