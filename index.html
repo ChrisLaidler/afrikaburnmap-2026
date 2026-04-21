@@ -109,6 +109,15 @@
     font-size:11px; color:#888; white-space:nowrap;
     min-width:76px;
   }
+  .schedule-btn {
+    appearance:none; background:#1d1d1d; color:#ddd; border:1px solid #444;
+    border-radius:5px; padding:2px 8px; font-size:11px; line-height:1.25;
+    cursor:pointer; white-space:nowrap;
+  }
+  .schedule-btn:hover,
+  .schedule-btn:focus-visible {
+    background:#2a2a2a; border-color:#777; outline:none;
+  }
   header .gps-status.clickable { cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
   header .gps-status.pending { color:#f0c96c; }
   header .gps-status.ready { color:#7de38f; }
@@ -352,6 +361,16 @@
   .detail-links { display:flex; flex-direction:column; gap:4px; }
   .detail-source a { color:#9edcff; text-decoration:none; }
   .detail-source a:hover { text-decoration:underline; }
+  .detail-schedule-links { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .detail-schedule-link {
+    appearance:none; background:#222; color:#ddd; border:1px solid #444;
+    border-radius:5px; padding:4px 8px; font-size:11px; line-height:1.25;
+    cursor:pointer; text-align:left;
+  }
+  .detail-schedule-link:hover,
+  .detail-schedule-link:focus-visible {
+    background:#2a2a2a; border-color:#777; outline:none;
+  }
 
   @media (max-width: 640px) {
     .details-panel {
@@ -499,6 +518,370 @@
     margin-top:14px; padding-top:12px; border-top:1px solid #2c2c2c;
     color:#bbb; font-size:12px;
   }
+  .schedule-backdrop {
+    position:fixed; inset:0; z-index:112; display:none;
+    background:rgba(0,0,0,0.78);
+    align-items:stretch; justify-content:stretch; padding:0;
+  }
+  .schedule-backdrop.open { display:flex; }
+  .schedule-panel {
+    width:100vw;
+    height:100dvh;
+    background:rgba(18,18,18,0.98); color:#eee;
+    border:0;
+    box-shadow:none;
+    display:flex; flex-direction:column;
+  }
+  .schedule-head {
+    padding:10px 14px 8px;
+    border-bottom:1px solid #333;
+  }
+  .schedule-title-row {
+    display:flex; align-items:center; gap:10px;
+  }
+  .schedule-title-row h2 {
+    margin:0; font-size:18px; line-height:1.2; flex:1 1 auto;
+  }
+  .schedule-actions {
+    display:flex; gap:6px; align-items:center;
+  }
+  .schedule-nav,
+  .schedule-close {
+    appearance:none; background:#222; color:#eee; border:1px solid #444;
+    border-radius:5px; min-width:28px; height:28px; padding:0 9px;
+    font-size:12px; line-height:1; cursor:pointer;
+  }
+  .schedule-nav:hover,
+  .schedule-nav:focus-visible,
+  .schedule-close:hover,
+  .schedule-close:focus-visible {
+    background:#2b2b2b; border-color:#666; outline:none;
+  }
+  .schedule-day-list {
+    display:flex; gap:4px; overflow-x:auto; padding-top:8px;
+    scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .schedule-day-list::-webkit-scrollbar { display:none; }
+  .schedule-day {
+    appearance:none; background:#1c1c1c; color:#cfcfcf; border:1px solid #333;
+    border-radius:999px; padding:4px 8px; font-size:10.5px; line-height:1.15;
+    white-space:nowrap; cursor:pointer;
+  }
+  .schedule-day:hover,
+  .schedule-day:focus-visible {
+    background:#262626; border-color:#555; outline:none;
+  }
+  .schedule-day.active {
+    background:#2f2f2f; color:#fff; border-color:#888;
+  }
+  .schedule-view-row {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding-top:8px;
+  }
+  .schedule-filter-row {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .schedule-view-toggle {
+    display:inline-flex; gap:4px; align-items:center;
+    background:#141414; border:1px solid #333; border-radius:7px; padding:3px;
+  }
+  .schedule-view-btn {
+    appearance:none; background:transparent; color:#bbb; border:0;
+    border-radius:5px; padding:5px 10px; font-size:11px; line-height:1.15;
+    cursor:pointer;
+  }
+  .schedule-view-btn:hover,
+  .schedule-view-btn:focus-visible {
+    background:#222; color:#eee; outline:none;
+  }
+  .schedule-view-btn.active {
+    background:#303030; color:#fff;
+  }
+  .schedule-view-hint {
+    font-size:11px; color:#888;
+  }
+  .schedule-kind-filters {
+    display:inline-flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .schedule-kind-filter {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; color:#bbb;
+    cursor:pointer;
+  }
+  .schedule-kind-filter.burn-filter span {
+    color:#ffc15a;
+  }
+  .schedule-kind-filter input {
+    margin:0; width:13px; height:13px;
+  }
+  .schedule-category-filters {
+    display:flex; gap:6px; align-items:center; flex-wrap:nowrap;
+    overflow:auto hidden;
+    padding-bottom:2px;
+    scrollbar-width:none;
+  }
+  .schedule-category-filters::-webkit-scrollbar {
+    display:none;
+  }
+  .schedule-category-filter {
+    display:inline-flex; align-items:center; gap:4px;
+    flex:0 0 auto;
+    font-size:10px; color:#bbb;
+    cursor:pointer;
+    white-space:nowrap;
+    padding:2px 0;
+  }
+  .schedule-category-filter input {
+    margin:0; width:12px; height:12px;
+  }
+  .schedule-category-filter.burn span { color:#ffc15a; }
+  .schedule-category-filter.music span,
+  .schedule-category-filter.performance span { color:#f6a3d8; }
+  .schedule-category-filter.workshop span { color:#d4c6ff; }
+  .schedule-category-filter.wellness span { color:#9de7c1; }
+  .schedule-category-filter.food-drink span { color:#ffd9a0; }
+  .schedule-category-filter.service span { color:#9ddfff; }
+  .schedule-category-filter.movement span { color:#d4e89c; }
+  .schedule-category-filter.community span { color:#d0d0d0; }
+  .schedule-main {
+    flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+  }
+  .schedule-content {
+    flex:1 1 auto; min-height:0; overflow:auto;
+    padding:12px 14px 10px;
+  }
+  .schedule-detail {
+    flex:0 0 auto; border-top:1px solid #333;
+    background:rgba(16,16,16,0.98);
+    padding:12px 14px 14px;
+    max-height:min(30vh, 250px);
+    overflow:auto;
+  }
+  .schedule-empty {
+    color:#aaa; font-size:13px; line-height:1.4;
+  }
+  .schedule-item {
+    background:#171717; border:1px solid #2f2f2f; border-radius:7px;
+    overflow:hidden;
+  }
+  .schedule-item + .schedule-item { margin-top:8px; }
+  .schedule-item.event-kind { border-color:rgba(255,61,138,0.28); }
+  .schedule-item.open-kind { border-color:rgba(0,160,215,0.28); }
+  .schedule-item.burn-category {
+    border-color:rgba(255,189,88,0.38);
+    box-shadow:0 0 0 1px rgba(255,173,51,0.08);
+  }
+  .schedule-item.selected {
+    border-color:rgba(255,242,0,0.6);
+    box-shadow:0 0 0 1px rgba(255,242,0,0.22), 0 0 18px rgba(255,242,0,0.12);
+  }
+  .schedule-item-summary {
+    width:100%; appearance:none; background:none; border:0; color:inherit;
+    display:grid; grid-template-columns:auto minmax(0, 1fr);
+    gap:10px; align-items:start; text-align:left; padding:10px 12px;
+    cursor:pointer;
+  }
+  .schedule-item-summary:hover,
+  .schedule-item-summary:focus-visible {
+    background:rgba(255,255,255,0.04); outline:none;
+  }
+  .schedule-item-time {
+    font-size:11px; font-weight:600; color:#f0f0f0; white-space:nowrap;
+  }
+  .schedule-item-main {
+    min-width:0; display:grid; gap:4px;
+  }
+  .schedule-item-title {
+    font-size:13px; line-height:1.3; color:#efefef;
+  }
+  .schedule-item-meta {
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    font-size:10px; color:#aaa;
+  }
+  .schedule-kind {
+    display:inline-flex; align-items:center;
+    padding:2px 6px; border-radius:999px; border:1px solid #444;
+    text-transform:uppercase; letter-spacing:.04em; font-size:10px;
+  }
+  .schedule-category {
+    display:inline-flex; align-items:center;
+    padding:2px 6px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.16);
+    background:rgba(255,255,255,0.05);
+    color:#cfcfcf;
+    font-size:10px;
+    line-height:1.1;
+    white-space:nowrap;
+  }
+  .schedule-category.burn {
+    color:#ffd36b;
+    border-color:rgba(255,176,53,0.48);
+    background:rgba(255,166,0,0.12);
+  }
+  .schedule-kind.event {
+    color:#ff9bc0; border-color:rgba(255,61,138,0.42);
+  }
+  .schedule-kind.open {
+    color:#8fdfff; border-color:rgba(0,160,215,0.42);
+  }
+  .schedule-detail-empty {
+    color:#888; font-size:12px; line-height:1.45;
+  }
+  .schedule-detail-head {
+    display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  }
+  .schedule-detail-title {
+    margin:0; font-size:16px; line-height:1.2;
+  }
+  .schedule-detail-meta {
+    display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+    margin-top:6px; font-size:11px; color:#aaa;
+  }
+  .schedule-detail-description {
+    margin:10px 0 0; font-size:12px; line-height:1.45; color:#ddd;
+    white-space:pre-line;
+  }
+  .schedule-item-links,
+  .schedule-detail-links {
+    display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;
+  }
+  .schedule-map-link {
+    appearance:none; background:#222; color:#ddd; border:1px solid #444;
+    border-radius:5px; padding:4px 8px; font-size:11px; line-height:1.25;
+    cursor:pointer;
+  }
+  .schedule-map-link:hover,
+  .schedule-map-link:focus-visible {
+    background:#2a2a2a; border-color:#777; outline:none;
+  }
+  .schedule-map-link.theme { color:var(--theme); border-color:rgba(57,194,255,0.45); }
+  .schedule-map-link.art { color:var(--art); border-color:rgba(255,61,138,0.45); }
+  .schedule-map-link.occ { color:var(--occ); border-color:rgba(0,160,215,0.45); }
+  .schedule-map-link.support { color:var(--support); border-color:rgba(141,131,186,0.45); }
+  .schedule-map-link.plaza { color:var(--plaza); border-color:rgba(120,214,75,0.45); }
+  .schedule-map-link.toilet { color:var(--toilet); border-color:rgba(201,201,201,0.45); }
+  .schedule-timeline-shell {
+    border:1px solid #2e2e2e;
+    border-radius:8px;
+    background:#141414;
+    min-width:max-content;
+  }
+  .schedule-timeline-axis {
+    position:sticky; top:0; z-index:2;
+    background:rgba(20,20,20,0.98);
+    border-bottom:1px solid #2e2e2e;
+  }
+  .schedule-timeline-axis-track {
+    position:relative;
+    height:30px;
+    min-width:100%;
+  }
+  .schedule-timeline-hour {
+    position:absolute; top:7px; transform:translateX(-50%);
+    font-size:10px; color:#888; text-align:center; white-space:nowrap;
+  }
+  .schedule-timeline-grid {
+    position:relative;
+  }
+  .schedule-timeline-track {
+    position:relative;
+    min-width:100%;
+    background:#141414;
+  }
+  .schedule-timeline-vline {
+    position:absolute; top:0; bottom:0; width:1px;
+    background:rgba(255,255,255,0.05);
+  }
+  .schedule-timeline-hline {
+    position:absolute; left:0; right:0; height:1px;
+    background:rgba(255,255,255,0.05);
+  }
+  .schedule-timeline-sun-line {
+    position:absolute; top:0; bottom:0; width:1px;
+    background:rgba(255,236,138,0.55);
+    box-shadow:0 0 4px rgba(255,236,138,0.16);
+    pointer-events:none;
+    z-index:0;
+  }
+  .schedule-timeline-sun-label {
+    position:absolute; top:4px; transform:translateX(-50%);
+    font-size:8px; font-weight:600; line-height:1;
+    color:rgba(255,243,194,0.95);
+    background:rgba(70,58,24,0.82);
+    border:1px solid rgba(255,236,138,0.35);
+    border-radius:999px;
+    padding:1px 4px;
+    white-space:nowrap;
+    pointer-events:none;
+    z-index:2;
+  }
+  .schedule-timeline-now-line {
+    position:absolute; top:0; bottom:0; width:2px;
+    background:rgba(71,164,255,0.96);
+    box-shadow:0 0 8px rgba(71,164,255,0.24);
+    pointer-events:none;
+    z-index:0;
+  }
+  .schedule-timeline-now-label {
+    position:absolute; top:4px; transform:translateX(-50%);
+    font-size:9px; font-weight:700; line-height:1;
+    color:#0b1b2a;
+    background:rgba(128,196,255,0.98);
+    border-radius:999px;
+    padding:2px 5px;
+    white-space:nowrap;
+    pointer-events:none;
+    z-index:3;
+  }
+  .schedule-timeline-card {
+    position:absolute; border-radius:4px; border:1px solid #444;
+    padding:1px 3px; overflow:hidden; cursor:pointer;
+    background:#1e1e1e;
+    box-shadow:none;
+    text-align:left;
+    z-index:1;
+  }
+  .schedule-timeline-card.burn-category {
+    background:rgba(255,173,51,0.16);
+    border-color:rgba(255,189,88,0.52);
+  }
+  .schedule-timeline-card.open-ended::after {
+    content:"";
+    position:absolute;
+    top:-1px;
+    right:-1px;
+    bottom:-1px;
+    width:8px;
+    background:
+      linear-gradient(-45deg,
+        transparent 0 2px,
+        rgba(255,255,255,0.75) 2px 3px,
+        transparent 3px 5px);
+    background-size:8px 5px;
+    background-repeat:repeat-y;
+    opacity:0.7;
+    pointer-events:none;
+  }
+  .schedule-timeline-card.event-kind {
+    background:rgba(255,61,138,0.14);
+    border-color:rgba(255,61,138,0.38);
+  }
+  .schedule-timeline-card.open-kind {
+    background:rgba(0,160,215,0.14);
+    border-color:rgba(0,160,215,0.38);
+  }
+  .schedule-timeline-card.selected {
+    border-color:rgba(255,242,0,0.75);
+    box-shadow:0 0 0 1px rgba(255,242,0,0.24);
+  }
+  .schedule-timeline-card:hover,
+  .schedule-timeline-card:focus-visible {
+    outline:none; filter:brightness(1.06);
+  }
+  .schedule-timeline-title {
+    font-size:9.5px; line-height:1.1; color:#f0f0f0;
+    white-space:nowrap; overflow:hidden; text-overflow:clip;
+  }
   @media (max-width: 700px) {
     :root { --header-h: 94px; }
     header {
@@ -600,6 +983,35 @@
       width:100vw; max-height:78vh; border-radius:8px 8px 0 0;
       border-left:0; border-right:0; border-bottom:0;
     }
+    .schedule-head { padding:10px 10px 8px; }
+    .schedule-content { padding:10px 10px 8px; }
+    .schedule-detail {
+      padding:10px;
+      max-height:min(34vh, 270px);
+    }
+    .schedule-day-list { gap:3px; padding-top:7px; }
+    .schedule-day { padding:3px 6.5px; font-size:9.5px; }
+    .schedule-view-row {
+      gap:8px;
+      align-items:flex-start;
+      flex-direction:column;
+    }
+    .schedule-filter-row {
+      width:100%;
+      justify-content:space-between;
+    }
+    .schedule-category-filters {
+      gap:5px;
+      width:100%;
+    }
+    .schedule-category-filter {
+      font-size:9px;
+    }
+    .schedule-view-hint { display:none; }
+    .schedule-item-summary { gap:8px; padding:9px 10px; }
+    .schedule-item-title { font-size:12px; }
+    .schedule-timeline-axis-track { height:28px; }
+    .schedule-timeline-hour { font-size:9px; top:6px; }
   }
 </style>
 </head>
@@ -608,8 +1020,9 @@
   <div class="header-title">
     <h1><button type="button" class="title-about-btn" id="about-btn">AfrikaBurn 2026</button></h1>
     <span class="hint hint-title">hover to identify · scroll to zoom · drag to pan</span>
-    <label class="highres-toggle"><input type="checkbox" id="f_highres" checked> high-res map</label>
+    <label class="highres-toggle"><input type="checkbox" id="f_highres" checked> high-res</label>
     <label class="gps-toggle"><input type="checkbox" id="f_locate" checked> GPS</label>
+    <button type="button" class="schedule-btn" id="schedule-btn">Schedule</button>
     <span class="gps-status" id="gps-status">GPS off</span>
   </div>
   <div class="header-search">
@@ -673,6 +1086,51 @@
   </section>
 </div>
 
+<div class="schedule-backdrop" id="schedule-backdrop" aria-hidden="true">
+  <section class="schedule-panel" role="dialog" aria-modal="true" aria-labelledby="schedule-title">
+    <div class="schedule-head">
+      <div class="schedule-title-row">
+        <h2 id="schedule-title">Burn schedule</h2>
+        <div class="schedule-actions">
+          <button type="button" class="schedule-nav" id="schedule-prev" aria-label="Previous burn day">‹</button>
+          <button type="button" class="schedule-nav" id="schedule-today">Today</button>
+          <button type="button" class="schedule-nav" id="schedule-next" aria-label="Next burn day">›</button>
+          <button type="button" class="schedule-close" id="schedule-close" aria-label="Close schedule">×</button>
+        </div>
+      </div>
+      <div class="schedule-day-list" id="schedule-days"></div>
+      <div class="schedule-view-row">
+        <div class="schedule-filter-row">
+          <div class="schedule-view-toggle" id="schedule-view-toggle" role="tablist" aria-label="Schedule view">
+            <button type="button" class="schedule-view-btn active" id="schedule-view-agenda" data-schedule-view="agenda" role="tab" aria-selected="true">Agenda</button>
+            <button type="button" class="schedule-view-btn" id="schedule-view-timeline" data-schedule-view="timeline" role="tab" aria-selected="false">Timeline</button>
+          </div>
+          <div class="schedule-kind-filters" id="schedule-kind-filters" aria-label="Schedule filters">
+            <label class="schedule-kind-filter">
+              <input type="checkbox" id="schedule-filter-events" checked>
+              <span>Events</span>
+            </label>
+            <label class="schedule-kind-filter">
+              <input type="checkbox" id="schedule-filter-open" checked>
+              <span>Open times</span>
+            </label>
+            <label class="schedule-kind-filter burn-filter">
+              <input type="checkbox" id="schedule-filter-burn" checked>
+              <span>Burn</span>
+            </label>
+          </div>
+        </div>
+        <div class="schedule-category-filters" id="schedule-category-filters" aria-label="Schedule categories"></div>
+        <div class="schedule-view-hint">Select an item to see full details and jump back to the map.</div>
+      </div>
+    </div>
+    <div class="schedule-main">
+      <div class="schedule-content" id="schedule-content"></div>
+      <div class="schedule-detail" id="schedule-detail"></div>
+    </div>
+  </section>
+</div>
+
 <aside class="details-panel" id="details-panel" aria-hidden="true">
   <div class="details-card" role="dialog" aria-labelledby="details-title">
     <button type="button" class="details-grip" id="details-grip" aria-label="Drag details panel"></button>
@@ -722,13 +1180,15 @@
 
 <script src="data.js"></script>
 <script src="project_details.js"></script>
+<script src="schedule_data.js"></script>
 <script src="old_wtf_details.js"></script>
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.21.11";
-  const APP_CACHE_VERSION = "v38";
+  const APP_VERSION = "2026.04.21.12";
+  const APP_CACHE_VERSION = "v39";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
+  const scheduleData = typeof SCHEDULE_DATA !== "undefined" ? SCHEDULE_DATA : { days: [], entries: [], byDate: {}, byLinkedCode: {}, series: [], seriesById: {}, seriesByLinkedCode: {} };
   const oldWtfDetails = typeof OLD_WTF_DETAILS !== "undefined" ? OLD_WTF_DETAILS : { byCode: {} };
   const viewport = document.getElementById("viewport");
   const mapDiv = document.getElementById("map");
@@ -743,11 +1203,25 @@
   gpsStatus.setAttribute("aria-disabled", "true");
   gpsStatus.tabIndex = -1;
   const aboutBtn = document.getElementById("about-btn");
+  const scheduleBtn = document.getElementById("schedule-btn");
   const appVersion = document.getElementById("app-version");
   const aboutBackdrop = document.getElementById("about-backdrop");
   const aboutClose = document.getElementById("about-close");
   const aboutVersion = document.getElementById("about-version");
   const aboutCacheVersion = document.getElementById("about-cache-version");
+  const scheduleBackdrop = document.getElementById("schedule-backdrop");
+  const scheduleClose = document.getElementById("schedule-close");
+  const schedulePrev = document.getElementById("schedule-prev");
+  const scheduleNext = document.getElementById("schedule-next");
+  const scheduleToday = document.getElementById("schedule-today");
+  const scheduleDays = document.getElementById("schedule-days");
+  const scheduleContent = document.getElementById("schedule-content");
+  const scheduleDetail = document.getElementById("schedule-detail");
+  const scheduleViewToggle = document.getElementById("schedule-view-toggle");
+  const scheduleCategoryFilters = document.getElementById("schedule-category-filters");
+  const scheduleFilterEvents = document.getElementById("schedule-filter-events");
+  const scheduleFilterOpen = document.getElementById("schedule-filter-open");
+  const scheduleFilterBurn = document.getElementById("schedule-filter-burn");
   const detailsPanel = document.getElementById("details-panel");
   const detailsCard = detailsPanel.querySelector(".details-card");
   const detailsGrip = document.getElementById("details-grip");
@@ -798,6 +1272,7 @@
   }
   window.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") closeAbout();
+    if (ev.key === "Escape") closeSchedule();
   });
 
   function updateHeaderOffset() {
@@ -1388,6 +1863,699 @@
     frameHits([targetEl]);
   }
 
+  let activeScheduleDate = null;
+  let activeScheduleEventId = null;
+  let activeScheduleView = "agenda";
+  let scheduleShowEvents = true;
+  let scheduleShowOpen = true;
+  let scheduleShowBurn = true;
+  let scheduleTimelineNeedsMorningAnchor = true;
+  let scheduleNowTimer = null;
+  const TIMELINE_START_MIN = 0;
+  const TIMELINE_END_MIN = 24 * 60;
+  const SCHEDULE_CATEGORY_FILTERS = [
+    { key: "Burn", label: "Burn", shortLabel: "Burn" },
+    { key: "Music", label: "Music", shortLabel: "Music" },
+    { key: "Performance", label: "Performance", shortLabel: "Perf" },
+    { key: "Workshop", label: "Workshop", shortLabel: "Work" },
+    { key: "Wellness", label: "Wellness", shortLabel: "Well" },
+    { key: "Food & Drink", label: "Food & Drink", shortLabel: "Food" },
+    { key: "Service", label: "Service", shortLabel: "Serv" },
+    { key: "Movement", label: "Movement", shortLabel: "Move" },
+    { key: "Community", label: "Community", shortLabel: "Comm" },
+  ];
+  const scheduleCategoryState = Object.fromEntries(SCHEDULE_CATEGORY_FILTERS.map((filter) => [filter.key, true]));
+  const BURN_SITE_SUN = {
+    lat: -32.518,
+    lon: 19.956,
+    eastHorizonAltitudeDegrees: 0,
+    westHorizonAltitudeDegrees: 0,
+  };
+  const SOLAR_RAD = Math.PI / 180;
+  const SOLAR_DAY_MS = 86400000;
+  const SOLAR_J1970 = 2440588;
+  const SOLAR_J2000 = 2451545;
+  const SOLAR_E = SOLAR_RAD * 23.4397;
+
+  function currentBurnLocalParts() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Johannesburg",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date());
+    return Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+  }
+
+  function currentBurnLocalDateIso() {
+    const parts = currentBurnLocalParts();
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  }
+
+  function defaultScheduleDate() {
+    const todayIso = currentBurnLocalDateIso();
+    return scheduleData.byDate?.[todayIso] ? todayIso : scheduleData.days[0]?.date || null;
+  }
+
+  function currentScheduleNowInfo() {
+    const parts = currentBurnLocalParts();
+    const todayIso = `${parts.year}-${parts.month}-${parts.day}`;
+    if (activeScheduleDate !== todayIso || !scheduleData.byDate?.[todayIso]) return null;
+    const minutes = Number(parts.hour || 0) * 60 + Number(parts.minute || 0);
+    if (!Number.isFinite(minutes)) return null;
+    return {
+      minutes,
+      label: `${parts.hour}:${parts.minute}`,
+    };
+  }
+
+  function solarToJulian(date) {
+    return (date.valueOf() / SOLAR_DAY_MS) - 0.5 + SOLAR_J1970;
+  }
+
+  function solarFromJulian(julian) {
+    return new Date((julian + 0.5 - SOLAR_J1970) * SOLAR_DAY_MS);
+  }
+
+  function solarToDays(date) {
+    return solarToJulian(date) - SOLAR_J2000;
+  }
+
+  function solarRightAscension(lon, lat) {
+    return Math.atan2(Math.sin(lon) * Math.cos(SOLAR_E) - Math.tan(lat) * Math.sin(SOLAR_E), Math.cos(lon));
+  }
+
+  function solarDeclination(lon, lat) {
+    return Math.asin(Math.sin(lat) * Math.cos(SOLAR_E) + Math.cos(lat) * Math.sin(SOLAR_E) * Math.sin(lon));
+  }
+
+  function solarAzimuth(hourAngle, phi, dec) {
+    return Math.atan2(Math.sin(hourAngle), Math.cos(hourAngle) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi));
+  }
+
+  function solarAltitude(hourAngle, phi, dec) {
+    return Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(hourAngle));
+  }
+
+  function solarSiderealTime(days, lw) {
+    return SOLAR_RAD * (280.16 + 360.9856235 * days) - lw;
+  }
+
+  function solarMeanAnomaly(days) {
+    return SOLAR_RAD * (357.5291 + 0.98560028 * days);
+  }
+
+  function solarEclipticLongitude(meanAnomaly) {
+    const equationOfCenter = SOLAR_RAD * (1.9148 * Math.sin(meanAnomaly) + 0.02 * Math.sin(2 * meanAnomaly) + 0.0003 * Math.sin(3 * meanAnomaly));
+    const perihelion = SOLAR_RAD * 102.9372;
+    return meanAnomaly + equationOfCenter + perihelion + Math.PI;
+  }
+
+  function solarJulianCycle(days, lw) {
+    return Math.round(days - 0.0009 - lw / (2 * Math.PI));
+  }
+
+  function solarApproxTransit(hourAngle, lw, n) {
+    return 0.0009 + (hourAngle + lw) / (2 * Math.PI) + n;
+  }
+
+  function solarTransitJulian(ds, meanAnomaly, eclipticLongitude) {
+    return SOLAR_J2000 + ds + 0.0053 * Math.sin(meanAnomaly) - 0.0069 * Math.sin(2 * eclipticLongitude);
+  }
+
+  function solarHourAngle(h, phi, dec) {
+    const value = (Math.sin(h) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+    if (value <= -1) return Math.PI;
+    if (value >= 1) return 0;
+    return Math.acos(value);
+  }
+
+  function solarSetJulian(h, lw, phi, dec, n, meanAnomaly, eclipticLongitude) {
+    const hourAngle = solarHourAngle(h, phi, dec);
+    const approxTransit = solarApproxTransit(hourAngle, lw, n);
+    return solarTransitJulian(approxTransit, meanAnomaly, eclipticLongitude);
+  }
+
+  function solarMinutesInBurnTimezone(date) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Johannesburg",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
+    const lookup = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+    return Number(lookup.hour || 0) * 60 + Number(lookup.minute || 0);
+  }
+
+  function scheduleSunMarkers(dateIso) {
+    if (!dateIso) return [];
+    const noon = new Date(`${dateIso}T12:00:00+02:00`);
+    if (Number.isNaN(noon.valueOf())) return [];
+    const lw = SOLAR_RAD * -BURN_SITE_SUN.lon;
+    const phi = SOLAR_RAD * BURN_SITE_SUN.lat;
+    const days = solarToDays(noon);
+    const n = solarJulianCycle(days, lw);
+    const ds = solarApproxTransit(0, lw, n);
+    const meanAnomaly = solarMeanAnomaly(ds);
+    const eclipticLongitude = solarEclipticLongitude(meanAnomaly);
+    const declination = solarDeclination(eclipticLongitude, 0);
+    const noonJulian = solarTransitJulian(ds, meanAnomaly, eclipticLongitude);
+    const sunriseAltitude = SOLAR_RAD * (-0.833 + (BURN_SITE_SUN.eastHorizonAltitudeDegrees || 0));
+    const sunsetAltitude = SOLAR_RAD * (-0.833 + (BURN_SITE_SUN.westHorizonAltitudeDegrees || 0));
+    const sunsetJulian = solarSetJulian(sunsetAltitude, lw, phi, declination, n, meanAnomaly, eclipticLongitude);
+    const sunriseJulian = noonJulian - (sunsetJulian - noonJulian);
+    const sunrise = solarFromJulian(sunriseJulian);
+    const sunset = solarFromJulian(sunsetJulian);
+    const sunriseMinutes = solarMinutesInBurnTimezone(sunrise);
+    const sunsetMinutes = solarMinutesInBurnTimezone(sunset);
+    return [
+      { key: "sunrise", label: "sunrise", minutes: sunriseMinutes },
+      { key: "sunset", label: "sunset", minutes: sunsetMinutes },
+    ].filter((marker) => Number.isFinite(marker.minutes));
+  }
+
+  function mapEntryForCode(code) {
+    return (mapEntriesByCode.get(code) || [])[0] || null;
+  }
+
+  function scheduleSeriesForMapEntry(entryLike) {
+    const code = entryLike?.code;
+    return code ? (scheduleData.seriesByLinkedCode?.[code] || []) : [];
+  }
+
+  function linkedScheduleOccurrencesForMapEntry(entryLike) {
+    const code = entryLike?.code;
+    return code ? (scheduleData.byLinkedCode?.[code] || []) : [];
+  }
+
+  function formatScheduleJumpLabel(seriesItem) {
+    const kind = seriesItem.kind === "open" ? "Open" : "Event";
+    return `${seriesItem.summaryLabel} (${kind})`;
+  }
+
+  function setScheduleDate(date) {
+    if (!scheduleData.byDate?.[date]) return;
+    activeScheduleDate = date;
+  }
+
+  function scheduleOccurrenceById(id) {
+    return scheduleData.entries.find((item) => item.id === id) || null;
+  }
+
+  function activeScheduleItem() {
+    return activeScheduleEventId ? scheduleOccurrenceById(activeScheduleEventId) : null;
+  }
+
+  function chooseScheduleDateForSeries(seriesItem) {
+    if (!seriesItem) return defaultScheduleDate();
+    const today = defaultScheduleDate();
+    const occurrences = scheduleData.entries.filter((item) => item.seriesId === seriesItem.id);
+    const todayMatch = occurrences.find((item) => item.date === today);
+    return todayMatch?.date || occurrences[0]?.date || today;
+  }
+
+  function timelineHourPx() {
+    return window.matchMedia("(max-width: 700px)").matches ? 23 : 28;
+  }
+
+  function timelineLanePx() {
+    return window.matchMedia("(max-width: 700px)").matches ? 22 : 24;
+  }
+
+  function timelineLabelStepHours() {
+    return window.matchMedia("(max-width: 700px)").matches ? 2 : 1;
+  }
+
+  function displayRangeForItem(item) {
+    const start = Number.isFinite(item.sortStart) ? item.sortStart : 12 * 60;
+    const estimated = estimateScheduleEnd(item, start);
+    let end = estimated.end;
+    const clampedStart = Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN - 30, start));
+    const clampedEnd = Math.max(clampedStart + 30, Math.min(TIMELINE_END_MIN, end));
+    return { start: clampedStart, end: clampedEnd, openEnded: estimated.openEnded };
+  }
+
+  function estimateScheduleEnd(item, start) {
+    if (Number.isFinite(item.sortEnd) && item.sortEnd > start) {
+      return { end: item.sortEnd, openEnded: false };
+    }
+    const label = String(item.timeLabel || "").toLowerCase();
+    const description = String(item.description || "").toLowerCase();
+    const combined = `${label} ${description}`;
+    if (/\b(until|till)\s+late\b|\blate\b/.test(label)) {
+      return { end: 24 * 60, openEnded: true };
+    }
+    if (/from\s+\d|from\s+[a-z]/.test(label)) {
+      return { end: Math.min(24 * 60, start + (item.kind === "open" ? 4 * 60 : 3 * 60)), openEnded: true };
+    }
+    if (/after dark|after sunset|friday evening|thursday evening|evening/.test(combined)) {
+      return { end: Math.min(24 * 60, start + 4 * 60), openEnded: true };
+    }
+    if (/sunset/.test(combined)) {
+      return { end: Math.min(24 * 60, start + 3.5 * 60), openEnded: true };
+    }
+    if (/afternoon/.test(combined)) {
+      return { end: Math.min(24 * 60, start + 3 * 60), openEnded: true };
+    }
+    if (/morning/.test(combined)) {
+      return { end: Math.min(24 * 60, start + 2.5 * 60), openEnded: true };
+    }
+    if (/sunrise/.test(combined)) {
+      return { end: Math.min(24 * 60, start + 90), openEnded: true };
+    }
+    return { end: Math.min(24 * 60, start + (item.kind === "open" ? 3 * 60 : 2 * 60)), openEnded: true };
+  }
+
+  function hourLabel(minutes) {
+    const hour = Math.floor(minutes / 60);
+    const suffix = hour >= 12 ? "pm" : "am";
+    const display = hour % 12 || 12;
+    return `${display}${suffix}`;
+  }
+
+  function scheduleItemSummary(item) {
+    return `${item.timeLabel} · ${item.title}`;
+  }
+
+  function closeSchedule() {
+    scheduleBackdrop.classList.remove("open");
+    scheduleBackdrop.setAttribute("aria-hidden", "true");
+    syncScheduleNowTimer();
+  }
+
+  function openSchedule(options = {}) {
+    closeAbout();
+    setScheduleDate(options.date || activeScheduleDate || defaultScheduleDate());
+    activeScheduleEventId = options.eventId || activeScheduleEventId || null;
+    scheduleBackdrop.classList.add("open");
+    scheduleBackdrop.setAttribute("aria-hidden", "false");
+    renderSchedule();
+    scrollScheduleSelectionIntoView();
+  }
+
+  function jumpToScheduleEntry(code) {
+    const entry = mapEntryForCode(code);
+    if (!entry) return;
+    closeSchedule();
+    clearIndexHighlights();
+    jumpToLinkedEntry(entry);
+  }
+
+  function selectScheduleEvent(eventId) {
+    activeScheduleEventId = eventId;
+    renderSchedule();
+    scrollScheduleSelectionIntoView();
+  }
+
+  function anchorScheduleTimelineMorning() {
+    if (activeScheduleView !== "timeline") return;
+    const pxPerMinute = timelineHourPx() / 60;
+    const targetLeft = Math.round(6 * 60 * pxPerMinute);
+    requestAnimationFrame(() => {
+      scheduleContent.scrollLeft = targetLeft;
+    });
+  }
+
+  function updateScheduleNowMarker() {
+    const info = currentScheduleNowInfo();
+    const label = scheduleContent.querySelector(".schedule-timeline-now-label");
+    const line = scheduleContent.querySelector(".schedule-timeline-now-line");
+    if (!label || !line) return;
+    if (!info) {
+      label.hidden = true;
+      line.hidden = true;
+      return;
+    }
+    const pxPerMinute = timelineHourPx() / 60;
+    const clampedMinutes = Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN, info.minutes));
+    const left = Math.round((clampedMinutes - TIMELINE_START_MIN) * pxPerMinute);
+    label.hidden = false;
+    line.hidden = false;
+    label.textContent = info.label;
+    label.style.left = `${left}px`;
+    line.style.left = `${left}px`;
+  }
+
+  function syncScheduleNowTimer() {
+    if (scheduleNowTimer) {
+      window.clearInterval(scheduleNowTimer);
+      scheduleNowTimer = null;
+    }
+    const shouldTrackNow = scheduleBackdrop.classList.contains("open")
+      && activeScheduleView === "timeline"
+      && activeScheduleDate === currentBurnLocalDateIso()
+      && !!scheduleData.byDate?.[activeScheduleDate];
+    if (!shouldTrackNow) return;
+    updateScheduleNowMarker();
+    scheduleNowTimer = window.setInterval(updateScheduleNowMarker, 30000);
+  }
+
+  function scrollScheduleSelectionIntoView() {
+    if (!activeScheduleEventId) return;
+    const target = scheduleContent.querySelector(`[data-schedule-id="${activeScheduleEventId}"]`);
+    target?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  function renderScheduleDays() {
+    scheduleDays.innerHTML = scheduleData.days.map((day) => `
+      <button type="button" class="schedule-day${day.date === activeScheduleDate ? " active" : ""}" data-schedule-date="${escapeHtml(day.date)}">${escapeHtml(day.label)}</button>
+    `).join("");
+    for (const button of scheduleDays.querySelectorAll("[data-schedule-date]")) {
+      button.addEventListener("click", () => {
+        activeScheduleEventId = null;
+        setScheduleDate(button.dataset.scheduleDate);
+        scheduleTimelineNeedsMorningAnchor = true;
+        renderSchedule();
+      });
+    }
+  }
+
+  function scheduleLinkedButtons(item) {
+    return (item.linkedCodes || []).map((code) => {
+      const entry = mapEntryForCode(code);
+      if (!entry) return "";
+      return `<button type="button" class="schedule-map-link ${escapeHtml(entry.section)}" data-schedule-code="${escapeHtml(code)}">See ${escapeHtml(code)}</button>`;
+    }).join("");
+  }
+
+  function scheduleCategoryClassName(category) {
+    return String(category || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  function scheduleItemHasBurnCategory(item) {
+    return (item.categories || []).includes("Burn");
+  }
+
+  function scheduleItemMatchesCategoryFilters(item) {
+    const categories = item.categories || [];
+    const enabled = SCHEDULE_CATEGORY_FILTERS.filter((filter) => scheduleCategoryState[filter.key]).map((filter) => filter.key);
+    if (enabled.length === SCHEDULE_CATEGORY_FILTERS.length) return true;
+    if (!categories.length) return true;
+    return categories.some((category) => enabled.includes(category));
+  }
+
+  function scheduleCategoryHtml(item) {
+    return (item.categories || []).map((category) => `<span class="schedule-category ${escapeHtml(scheduleCategoryClassName(category))}">${escapeHtml(category)}</span>`).join("");
+  }
+
+  function renderScheduleCategoryFilters() {
+    scheduleCategoryFilters.innerHTML = SCHEDULE_CATEGORY_FILTERS.map((filter) => {
+      const className = scheduleCategoryClassName(filter.key);
+      const checked = scheduleCategoryState[filter.key] ? " checked" : "";
+      return `
+        <label class="schedule-category-filter ${escapeHtml(className)}" title="${escapeHtml(filter.label)}">
+          <input type="checkbox" data-schedule-category="${escapeHtml(filter.key)}"${checked}>
+          <span>${escapeHtml(filter.shortLabel)}</span>
+        </label>
+      `;
+    }).join("");
+    for (const input of scheduleCategoryFilters.querySelectorAll("[data-schedule-category]")) {
+      input.addEventListener("change", () => {
+        scheduleCategoryState[input.dataset.scheduleCategory] = input.checked;
+        renderSchedule();
+        scrollScheduleSelectionIntoView();
+      });
+    }
+  }
+
+  function renderScheduleViewToggle() {
+    for (const button of scheduleViewToggle.querySelectorAll("[data-schedule-view]")) {
+      const active = button.dataset.scheduleView === activeScheduleView;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", active ? "true" : "false");
+    }
+    scheduleFilterEvents.checked = scheduleShowEvents;
+    scheduleFilterOpen.checked = scheduleShowOpen;
+    scheduleFilterBurn.checked = scheduleShowBurn;
+    renderScheduleCategoryFilters();
+  }
+
+  function scheduleItemsForCurrentFilters(items) {
+    return items.filter((item) => {
+      const kindVisible = (
+        (item.kind === "event" && scheduleShowEvents) ||
+        (item.kind === "open" && scheduleShowOpen)
+      );
+      if (!kindVisible) return false;
+      if (!scheduleShowBurn && scheduleItemHasBurnCategory(item)) return false;
+      if (!scheduleItemMatchesCategoryFilters(item)) return false;
+      return true;
+    });
+  }
+
+  function scheduleEmptyMessage() {
+    const noCategories = SCHEDULE_CATEGORY_FILTERS.every((filter) => !scheduleCategoryState[filter.key]);
+    if (noCategories) {
+      return "Enable one or more category filters to see schedule entries for this burn day.";
+    }
+    if (!scheduleShowEvents && !scheduleShowOpen && !scheduleShowBurn) {
+      return "Enable Events, Open times, or Burn to see schedule entries for this burn day.";
+    }
+    if (!scheduleShowEvents && !scheduleShowOpen) {
+      return "Enable Events or Open times to see non-burn schedule entries for this burn day.";
+    }
+    if (!scheduleShowEvents) {
+      return "No open times have been linked for this burn day yet.";
+    }
+    if (!scheduleShowOpen) {
+      return "No events have been linked for this burn day yet.";
+    }
+    if (!scheduleShowBurn) {
+      return "No non-burn timed events or openings have been linked for this burn day yet.";
+    }
+    return "No timed events or openings have been linked for this burn day yet.";
+  }
+
+  function renderScheduleAgenda(items) {
+    if (!items.length) {
+      scheduleContent.innerHTML = `<div class="schedule-empty">${escapeHtml(scheduleEmptyMessage())}</div>`;
+      return;
+    }
+    scheduleContent.innerHTML = items.map((item) => `
+      <article class="schedule-item ${escapeHtml(item.kind)}-kind${scheduleItemHasBurnCategory(item) ? " burn-category" : ""}${item.id === activeScheduleEventId ? " selected" : ""}" data-schedule-id="${escapeHtml(item.id)}">
+        <button type="button" class="schedule-item-summary" data-schedule-toggle="${escapeHtml(item.id)}">
+          <span class="schedule-item-time">${escapeHtml(item.timeLabel)}</span>
+          <span class="schedule-item-main">
+            <span class="schedule-item-title">${escapeHtml(item.title)}</span>
+            <span class="schedule-item-meta">
+              <span class="schedule-kind ${escapeHtml(item.kind)}">${escapeHtml(item.kindLabel)}</span>
+              <span>${escapeHtml(item.dayLabel)}</span>
+              ${item.linkedCodes.map((code) => `<span>${escapeHtml(code)}</span>`).join("")}
+              ${scheduleCategoryHtml(item)}
+            </span>
+          </span>
+        </button>
+      </article>
+    `).join("");
+  }
+
+  function computeTimelineLayout(items) {
+    const layoutItems = items.map((item) => ({ item, ...displayRangeForItem(item) }))
+      .sort((a, b) => a.start - b.start || a.end - b.end || a.item.title.localeCompare(b.item.title));
+    const laneEnds = [];
+    let maxLane = 0;
+    for (const record of layoutItems) {
+      let lane = laneEnds.findIndex((end) => end <= record.start);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(record.end);
+      } else {
+        laneEnds[lane] = record.end;
+      }
+      record.lane = lane;
+      if (lane + 1 > maxLane) maxLane = lane + 1;
+    }
+    return { items: layoutItems, laneCount: Math.max(1, maxLane) };
+  }
+
+  function renderScheduleTimeline(items) {
+    if (!items.length) {
+      scheduleContent.innerHTML = `<div class="schedule-empty">${escapeHtml(scheduleEmptyMessage())}</div>`;
+      return;
+    }
+    const pxPerHour = timelineHourPx();
+    const pxPerMinute = pxPerHour / 60;
+    const totalWidth = (TIMELINE_END_MIN - TIMELINE_START_MIN) * pxPerMinute;
+    const laneHeight = timelineLanePx();
+    const labelStep = timelineLabelStepHours();
+    const eventItems = items.filter((item) => item.kind === "event");
+    const openItems = items.filter((item) => item.kind === "open");
+    const eventLayout = computeTimelineLayout(eventItems);
+    const openLayout = computeTimelineLayout(openItems);
+    const eventLaneCount = eventLayout.items.length ? eventLayout.laneCount : 0;
+    const openLaneCount = openLayout.items.length ? openLayout.laneCount : 0;
+    const totalHeight = Math.max(1, eventLaneCount + openLaneCount) * laneHeight;
+    const nowInfo = currentScheduleNowInfo();
+    const sunMarkers = scheduleSunMarkers(activeScheduleDate);
+    const nowLeft = nowInfo
+      ? Math.round((Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN, nowInfo.minutes)) - TIMELINE_START_MIN) * pxPerMinute)
+      : null;
+    scheduleContent.innerHTML = `
+      <div class="schedule-timeline-shell">
+        <div class="schedule-timeline-axis">
+          <div class="schedule-timeline-axis-track" style="width:${Math.round(totalWidth)}px">
+            ${Array.from({ length: 24 }, (_, i) => {
+              if (i % labelStep !== 0) return "";
+              const minute = i * 60;
+              return `<div class="schedule-timeline-hour" style="left:${Math.round(minute * pxPerMinute)}px">${escapeHtml(hourLabel(minute))}</div>`;
+            }).join("")}
+            ${sunMarkers.map((marker) => {
+              const left = Math.round((Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN, marker.minutes)) - TIMELINE_START_MIN) * pxPerMinute);
+              return `<div class="schedule-timeline-sun-label" style="left:${left}px">${escapeHtml(marker.label)}</div>`;
+            }).join("")}
+            ${nowInfo ? `<div class="schedule-timeline-now-label" style="left:${nowLeft}px">${escapeHtml(nowInfo.label)}</div>` : ""}
+          </div>
+        </div>
+        <div class="schedule-timeline-grid">
+          <div class="schedule-timeline-track" style="width:${Math.round(totalWidth)}px; height:${Math.round(totalHeight)}px">
+            ${sunMarkers.map((marker) => {
+              const left = Math.round((Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN, marker.minutes)) - TIMELINE_START_MIN) * pxPerMinute);
+              return `<div class="schedule-timeline-sun-line" style="left:${left}px"></div>`;
+            }).join("")}
+            ${Array.from({ length: 25 }, (_, i) => `
+              <div class="schedule-timeline-vline" style="left:${Math.round(i * 60 * pxPerMinute)}px"></div>
+            `).join("")}
+            ${Array.from({ length: Math.max(1, eventLaneCount + openLaneCount) + 1 }, (_, i) => `
+              <div class="schedule-timeline-hline" style="top:${Math.round(i * laneHeight)}px"></div>
+            `).join("")}
+            ${nowInfo ? `<div class="schedule-timeline-now-line" style="left:${nowLeft}px"></div>` : ""}
+            ${[...eventLayout.items, ...openLayout.items.map((record) => ({ ...record, lane: record.lane + eventLaneCount }))].map((record) => {
+              const top = Math.round(record.lane * laneHeight + 1);
+              const height = Math.max(18, Math.round(laneHeight - 2));
+              const left = Math.round(record.start * pxPerMinute + 1);
+              const width = Math.max(16, Math.round((record.end - record.start) * pxPerMinute - 2));
+              const selected = record.item.id === activeScheduleEventId ? " selected" : "";
+              const openEnded = record.openEnded ? " open-ended" : "";
+              const burnCategory = scheduleItemHasBurnCategory(record.item) ? " burn-category" : "";
+              return `
+                <button type="button" class="schedule-timeline-card ${escapeHtml(record.item.kind)}-kind${burnCategory}${selected}${openEnded}" data-schedule-toggle="${escapeHtml(record.item.id)}" data-schedule-id="${escapeHtml(record.item.id)}" style="top:${top}px; left:${left}px; width:${width}px; height:${height}px;">
+                  <div class="schedule-timeline-title">${escapeHtml(record.item.title)}</div>
+                </button>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderScheduleDetail(item) {
+    if (!item) {
+      scheduleDetail.innerHTML = '<div class="schedule-detail-empty">Select an event or opening to see the full description and jump back to the map.</div>';
+      return;
+    }
+    scheduleDetail.innerHTML = `
+      <div class="schedule-detail-head">
+        <div>
+          <h3 class="schedule-detail-title">${escapeHtml(item.title)}</h3>
+          <div class="schedule-detail-meta">
+            <span class="schedule-kind ${escapeHtml(item.kind)}">${escapeHtml(item.kindLabel)}</span>
+            <span>${escapeHtml(item.dayLabel)}</span>
+            <span>${escapeHtml(item.timeLabel)}</span>
+            ${item.linkedCodes.map((code) => `<span>${escapeHtml(code)}</span>`).join("")}
+            ${scheduleCategoryHtml(item)}
+          </div>
+        </div>
+      </div>
+      <p class="schedule-detail-description">${escapeHtml(item.description)}</p>
+      <div class="schedule-detail-links">
+        ${scheduleLinkedButtons(item)}
+      </div>
+    `;
+    for (const button of scheduleDetail.querySelectorAll("[data-schedule-code]")) {
+      button.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        jumpToScheduleEntry(button.dataset.scheduleCode);
+      });
+    }
+  }
+
+  function attachScheduleSelectionHandlers() {
+    for (const button of scheduleContent.querySelectorAll("[data-schedule-toggle]")) {
+      button.addEventListener("click", () => {
+        selectScheduleEvent(button.dataset.scheduleToggle);
+      });
+    }
+  }
+
+  function renderSchedule() {
+    renderScheduleDays();
+    renderScheduleViewToggle();
+    const allItems = scheduleData.byDate?.[activeScheduleDate] || [];
+    const items = scheduleItemsForCurrentFilters(allItems);
+    if (activeScheduleEventId && !items.some((item) => item.id === activeScheduleEventId)) {
+      activeScheduleEventId = null;
+    }
+    if (!activeScheduleEventId && items.length) {
+      activeScheduleEventId = items[0].id;
+    }
+    if (activeScheduleView === "timeline") renderScheduleTimeline(items);
+    else renderScheduleAgenda(items);
+    attachScheduleSelectionHandlers();
+    renderScheduleDetail(activeScheduleItem());
+    if (activeScheduleView === "timeline" && scheduleTimelineNeedsMorningAnchor) {
+      scheduleTimelineNeedsMorningAnchor = false;
+      anchorScheduleTimelineMorning();
+    }
+    syncScheduleNowTimer();
+  }
+
+  scheduleBtn.addEventListener("click", () => {
+    openSchedule({ date: activeScheduleDate || defaultScheduleDate() });
+  });
+  scheduleClose.addEventListener("click", closeSchedule);
+  scheduleBackdrop.addEventListener("click", (ev) => {
+    if (ev.target === scheduleBackdrop) closeSchedule();
+  });
+  schedulePrev.addEventListener("click", () => {
+    const currentIndex = scheduleData.days.findIndex((day) => day.date === (activeScheduleDate || defaultScheduleDate()));
+    const nextIndex = Math.max(0, currentIndex - 1);
+    activeScheduleEventId = null;
+    setScheduleDate(scheduleData.days[nextIndex]?.date);
+    scheduleTimelineNeedsMorningAnchor = true;
+    renderSchedule();
+  });
+  scheduleNext.addEventListener("click", () => {
+    const currentIndex = scheduleData.days.findIndex((day) => day.date === (activeScheduleDate || defaultScheduleDate()));
+    const nextIndex = Math.min(scheduleData.days.length - 1, currentIndex + 1);
+    activeScheduleEventId = null;
+    setScheduleDate(scheduleData.days[nextIndex]?.date);
+    scheduleTimelineNeedsMorningAnchor = true;
+    renderSchedule();
+  });
+  scheduleToday.addEventListener("click", () => {
+    activeScheduleEventId = null;
+    setScheduleDate(defaultScheduleDate());
+    scheduleTimelineNeedsMorningAnchor = true;
+    renderSchedule();
+  });
+  for (const button of scheduleViewToggle.querySelectorAll("[data-schedule-view]")) {
+    button.addEventListener("click", () => {
+      activeScheduleView = button.dataset.scheduleView || "agenda";
+      if (activeScheduleView === "timeline") scheduleTimelineNeedsMorningAnchor = true;
+      renderSchedule();
+      scrollScheduleSelectionIntoView();
+    });
+  }
+  scheduleFilterEvents.addEventListener("change", () => {
+    scheduleShowEvents = scheduleFilterEvents.checked;
+    renderSchedule();
+    scrollScheduleSelectionIntoView();
+  });
+  scheduleFilterOpen.addEventListener("change", () => {
+    scheduleShowOpen = scheduleFilterOpen.checked;
+    renderSchedule();
+    scrollScheduleSelectionIntoView();
+  });
+  scheduleFilterBurn.addEventListener("change", () => {
+    scheduleShowBurn = scheduleFilterBurn.checked;
+    renderSchedule();
+    scrollScheduleSelectionIntoView();
+  });
+
   const INDEX_COLUMNS = [
     {
       mapSource: "standard",
@@ -1756,6 +2924,21 @@
       </section>
     `;
   }
+  function detailScheduleSection(mapEntry) {
+    const linkedSeries = scheduleSeriesForMapEntry(mapEntry);
+    if (!linkedSeries.length) return "";
+    const buttons = linkedSeries.map((item) => `
+      <button type="button" class="detail-schedule-link" data-schedule-series="${escapeHtml(item.id)}">
+        ${escapeHtml(formatScheduleJumpLabel(item))}
+      </button>
+    `).join("");
+    return `
+      <section class="detail-section">
+        <div class="detail-label">Schedule</div>
+        <div class="detail-schedule-links">${buttons}</div>
+      </section>
+    `;
+  }
   function detailFor(el) {
     const current = projectDetailForMapEntry({
       code: el.dataset.code,
@@ -1910,6 +3093,11 @@
       section,
     });
     const tagHtml = tags.map((tag) => `<button type="button" class="detail-tag" data-search-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join("");
+    const scheduleSectionHtml = detailScheduleSection(mapEntry || {
+      code,
+      name: el.dataset.name,
+      section,
+    });
     const tagsSectionHtml = detailTagsSection(tagHtml);
     const sourceLinks = detail?.links?.length
       ? detail.links
@@ -1942,9 +3130,11 @@
       ${detailSection("Additional Details", detail.additionalDetails, "detail-extra")}
       ${oldWtfSection(detail.oldWtf, hasPrimaryDetail ? "detail-extra" : "")}
       ${sourceHtml}
+      ${scheduleSectionHtml}
       ${tagsSectionHtml}
     ` : `
       <p class="details-empty">No ${escapeHtml(sourceTag)} details have been linked for this item yet.</p>
+      ${scheduleSectionHtml}
       ${tagsSectionHtml}
     `;
     for (const button of detailsBody.querySelectorAll(".detail-tag[data-search-tag]")) {
@@ -1953,6 +3143,15 @@
         applyFilter();
         const v = q.value.trim();
         history.replaceState(null, "", v ? "#q=" + encodeURIComponent(v) : "#");
+      });
+    }
+    for (const button of detailsBody.querySelectorAll(".detail-schedule-link[data-schedule-series]")) {
+      button.addEventListener("click", () => {
+        const seriesItem = scheduleData.seriesById?.[button.dataset.scheduleSeries];
+        if (!seriesItem) return;
+        const date = chooseScheduleDateForSeries(seriesItem);
+        const firstOccurrence = (scheduleData.byDate?.[date] || []).find((item) => item.seriesId === seriesItem.id);
+        openSchedule({ date, eventId: firstOccurrence?.id || null });
       });
     }
     setDetailsMode(mode);
@@ -2065,27 +3264,49 @@
     allowInitialGpsFrame = false;
   }
 
-  function frameLogicalPoint(point, scaleMultiplier = 1.85, centerYOffsetPx = 0) {
-    if (!point) return;
-    const mapPointX = mapX(point.x);
-    const mapPointY = mapY(point.y);
+  function getVisibleViewportRegion() {
     const vw = viewport.clientWidth, vh = viewport.clientHeight;
-    let visibleW = vw;
-    let visibleH = vh;
-    let visibleCx = vw / 2;
-    let visibleCy = vh / 2;
+    let left = 0, top = 0, right = vw, bottom = vh;
+
     if (detailsPanel.classList.contains("open")) {
       const detailsRect = detailsCard.getBoundingClientRect();
       if (isMobileDetails()) {
         const bottomInset = Math.min(vh, Math.max(0, detailsRect.height));
-        visibleH = Math.max(120, vh - bottomInset);
-        visibleCy = visibleH / 2;
+        bottom -= bottomInset;
       } else {
         const rightInset = Math.min(vw, Math.max(0, detailsRect.width + 24));
-        visibleW = Math.max(120, vw - rightInset);
-        visibleCx = visibleW / 2;
+        right -= rightInset;
       }
     }
+
+    if (searchResults.classList.contains("open") && searchResults.childElementCount) {
+      const viewRect = viewport.getBoundingClientRect();
+      const searchRect = searchResults.getBoundingClientRect();
+      const overlapTop = Math.max(
+        0,
+        Math.min(viewRect.bottom, searchRect.bottom) - Math.max(viewRect.top, searchRect.top)
+      );
+      if (overlapTop > 0) {
+        top += Math.min(Math.max(0, bottom - top - 120), overlapTop + 8);
+      }
+    }
+
+    const visibleW = Math.max(120, right - left);
+    const visibleH = Math.max(120, bottom - top);
+    return {
+      visibleW,
+      visibleH,
+      visibleCx: left + visibleW / 2,
+      visibleCy: top + visibleH / 2,
+    };
+  }
+
+  function frameLogicalPoint(point, scaleMultiplier = 1.85, centerYOffsetPx = 0) {
+    if (!point) return;
+    const mapPointX = mapX(point.x);
+    const mapPointY = mapY(point.y);
+    const { visibleCx, visibleCy: baseVisibleCy } = getVisibleViewportRegion();
+    let visibleCy = baseVisibleCy;
     visibleCy += centerYOffsetPx;
     scl = Math.max(fitScale(), Math.min(MAX_SCALE, fitScale() * scaleMultiplier));
     tx = visibleCx - mapPointX * scl;
@@ -2362,7 +3583,7 @@
       logicalPoint.y < 0 || logicalPoint.y > NAT_H
     ) {
       hideUserLocation();
-      setGpsStatus("Outside map", "warn");
+      setGpsStatus("Offsite", "warn");
       return;
     }
     userPin.style.left = mapX(logicalPoint.x) + "px";
@@ -2599,10 +3820,12 @@
     refreshHighlights();
     renderSearchResults(hits, qs);
     syncSearchUi();
-    // If exactly one hit, fly to it. If a few hits, frame them.
-    if (hits.length >= 1 && hits.length <= 12) frameHits(hits);
     if (qs && hits.length === 1) {
       openDetails(hits[0], isMobileDetails() ? "half" : "fit");
+      frameHits(hits);
+    } else if (hits.length >= 1 && hits.length <= 12) {
+      // If exactly one hit, fly to it. If a few hits, frame them.
+      frameHits(hits);
     }
   }
 
@@ -2619,27 +3842,11 @@
     const pad = singleHit ? 220 : 80; // natural-pixel padding around the hit region
     minX -= pad; minY -= pad; maxX += pad; maxY += pad;
     const rw = maxX - minX, rh = maxY - minY;
-    const vw = viewport.clientWidth, vh = viewport.clientHeight;
-    let visibleW = vw;
-    let visibleH = vh;
-    let visibleCx = vw / 2;
-    let visibleCy = vh / 2;
-    if (detailsPanel.classList.contains("open")) {
-      const detailsRect = detailsCard.getBoundingClientRect();
-      if (isMobileDetails()) {
-        const bottomInset = Math.min(vh, Math.max(0, detailsRect.height));
-        visibleH = Math.max(120, vh - bottomInset);
-        visibleCy = visibleH / 2;
-      } else {
-        const rightInset = Math.min(vw, Math.max(0, detailsRect.width + 24));
-        visibleW = Math.max(120, vw - rightInset);
-        visibleCx = visibleW / 2;
-      }
-    }
+    const { visibleW, visibleH, visibleCx, visibleCy } = getVisibleViewportRegion();
     // Target scale: fit region, but don't zoom out below current fit, or too far in
     const targetScale = Math.min(visibleW / rw, visibleH / rh);
     const minS = fitScale();
-    const maxFrameScale = singleHit ? minS * 2.7 : MAX_SCALE;
+    const maxFrameScale = singleHit ? minS * 5 : MAX_SCALE;
     const ns = Math.max(minS, Math.min(maxFrameScale, targetScale));
     scl = ns;
     // Center the region
