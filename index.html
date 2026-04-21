@@ -232,6 +232,7 @@
   @media (max-width: 640px) {
     .details-panel {
       top:auto; left:0; right:0; bottom:0; width:auto;
+      padding-top:env(safe-area-inset-top, 0px);
     }
     .details-card {
       border-radius:8px 8px 0 0;
@@ -240,7 +241,7 @@
       transition:transform .18s ease, height .18s ease;
     }
     .details-panel.open .details-card { transform:translateY(0); }
-    .details-panel.full .details-card { height:calc(100vh - 12px); }
+    .details-panel.full .details-card { height:calc(100dvh - env(safe-area-inset-top, 0px) - 12px); }
     .details-panel.minimized .details-card { height:92px; }
     .details-panel.minimized .details-body { display:none; }
     .details-grip { display:block; touch-action:none; }
@@ -1553,14 +1554,16 @@
       if (x < minX) minX = x; if (y < minY) minY = y;
       if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
     }
-    const pad = 80; // natural-pixel padding around the hit region
+    const singleHit = hits.length === 1;
+    const pad = singleHit ? 260 : 80; // natural-pixel padding around the hit region
     minX -= pad; minY -= pad; maxX += pad; maxY += pad;
     const rw = maxX - minX, rh = maxY - minY;
     const vw = viewport.clientWidth, vh = viewport.clientHeight;
     // Target scale: fit region, but don't zoom out below current fit, or too far in
     const targetScale = Math.min(vw / rw, vh / rh);
     const minS = fitScale();
-    const ns = Math.max(minS, Math.min(MAX_SCALE, targetScale));
+    const maxFrameScale = singleHit ? minS * 2.2 : MAX_SCALE;
+    const ns = Math.max(minS, Math.min(maxFrameScale, targetScale));
     scl = ns;
     // Center the region
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
