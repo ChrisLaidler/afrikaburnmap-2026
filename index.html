@@ -139,17 +139,6 @@
   .user-trail-layer {
     position:absolute; inset:0; pointer-events:none; z-index:5;
   }
-  .user-trail-point {
-    position:absolute; width:12px; height:12px; border-radius:50%;
-    background:rgba(255,122,0,0.85); border:1px solid rgba(59,23,0,0.85);
-    box-shadow:0 0 0 1px rgba(255,255,255,0.16), 0 0 10px rgba(255,122,0,0.45);
-    animation:user-trail-fade 15s linear forwards;
-  }
-  @keyframes user-trail-fade {
-    0% { opacity:0.65; }
-    70% { opacity:0.28; }
-    100% { opacity:0; }
-  }
   .user-pin-heading {
     position:absolute; left:50%; top:-9px;
     width:0; height:0; opacity:0;
@@ -980,10 +969,14 @@
     };
   }
 
+  let userTrailLayer = null;
   function applyMapSourceLayout() {
     updateMapRaster();
     mapDiv.style.width = currentMap.viewW + "px";
     mapDiv.style.height = currentMap.viewH + "px";
+    userTrailLayer?.setAttribute("viewBox", `0 0 ${currentMap.viewW} ${currentMap.viewH}`);
+    userTrailLayer?.setAttribute("width", currentMap.viewW);
+    userTrailLayer?.setAttribute("height", currentMap.viewH);
   }
   applyMapSourceLayout();
   function handleMobileRasterChange() {
@@ -1003,9 +996,13 @@
   const entryByHotspotEl = new WeakMap();
   const indexHotspots = [];
   const indexHotspotsByEntry = new WeakMap();
-  const userTrailLayer = document.createElement("div");
-  userTrailLayer.className = "user-trail-layer";
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  userTrailLayer = document.createElementNS(SVG_NS, "svg");
+  userTrailLayer.classList.add("user-trail-layer");
+  userTrailLayer.setAttribute("aria-hidden", "true");
+  userTrailLayer.setAttribute("overflow", "visible");
   mapDiv.appendChild(userTrailLayer);
+  applyMapSourceLayout();
   const userPin = document.createElement("div");
   userPin.className = "user-pin";
   userPin.setAttribute("aria-label", "Show your current position");
@@ -1889,9 +1886,10 @@
   let orientationPermissionBlocked = false;
   let initialGpsFrameDone = false;
   let allowInitialGpsFrame = true;
-  const USER_TRAIL_LIFETIME_MS = 15000;
-  const USER_TRAIL_MIN_DISTANCE = 10;
-  const USER_TRAIL_MAX_POINTS = 18;
+  const USER_TRAIL_LIFETIME_MS = 45000;
+  const USER_TRAIL_MIN_DISTANCE = 18;
+  const USER_TRAIL_MIN_SPEED_MPS = 0.65;
+  const USER_TRAIL_MAX_POINTS = 28;
   let userTrailPoints = [];
   let lastTrailFixTimestamp = null;
 
@@ -1901,6 +1899,8 @@
 
   function frameLogicalPoint(point, scaleMultiplier = 1.85, centerYOffsetPx = 0) {
     if (!point) return;
+    const mapPointX = mapX(point.x);
+    const mapPointY = mapY(point.y);
     const vw = viewport.clientWidth, vh = viewport.clientHeight;
     let visibleW = vw;
     let visibleH = vh;
@@ -1920,8 +1920,8 @@
     }
     visibleCy += centerYOffsetPx;
     scl = Math.max(fitScale(), Math.min(MAX_SCALE, fitScale() * scaleMultiplier));
-    tx = visibleCx - point.x * scl;
-    ty = visibleCy - point.y * scl;
+    tx = visibleCx - mapPointX * scl;
+    ty = visibleCy - mapPointY * scl;
     clampPan();
     apply();
   }
@@ -2050,59 +2050,58 @@
     frameCurrentUserLocation();
   });
 
-  function positionUserTrailPoint(point) {
-    point.el.style.left = mapX(point.x) + "px";
-    point.el.style.top = mapY(point.y) + "px";
-    point.el.style.transform = `translate(-50%, -50%) scale(${1 / scl})`;
-  }
-
   function pruneUserTrail(now = Date.now()) {
-    userTrailPoints = userTrailPoints.filter((point) => {
-      if (now - point.timestamp < USER_TRAIL_LIFETIME_MS) return true;
-      point.el.remove();
-      return false;
-    });
+    userTrailPoints = userTrailPoints.filter((point) => now - point.timestamp < USER_TRAIL_LIFETIME_MS);
   }
 
-  function updateUserTrailDisplay() {
-    pruneUserTrail();
-    for (const point of userTrailPoints) positionUserTrailPoint(point);
+  function updateUserTrailDisplay(now = Date.now()) {
+    pruneUserTrail(now);
+    userTrailLayer.replaceChildren();
+    if (userTrailPoints.length < 2) return;
+    const segmentCount = userTrailPoints.length - 1;
+    for (let i = 1; i < userTrailPoints.length; i++) {
+      const a = userTrailPoints[i - 1];
+      const b = userTrailPoints[i];
+      const ageRatio = Math.max(0, 1 - ((now - b.timestamp) / USER_TRAIL_LIFETIME_MS));
+      const proximityRatio = i / segmentCount;
+      const alpha = 0.85 * ageRatio * proximityRatio;
+      if (alpha <= 0.02) continue;
+      const seg = document.createElementNS(SVG_NS, "line");
+      seg.setAttribute("x1", mapX(a.x));
+      seg.setAttribute("y1", mapY(a.y));
+      seg.setAttribute("x2", mapX(b.x));
+      seg.setAttribute("y2", mapY(b.y));
+      seg.setAttribute("stroke", `rgba(120, 44, 0, ${alpha.toFixed(3)})`);
+      seg.setAttribute("stroke-width", "2");
+      seg.setAttribute("stroke-linecap", "round");
+      seg.setAttribute("vector-effect", "non-scaling-stroke");
+      userTrailLayer.appendChild(seg);
+    }
   }
 
   function clearUserTrail() {
-    for (const point of userTrailPoints) point.el.remove();
     userTrailPoints = [];
     lastTrailFixTimestamp = null;
+    userTrailLayer.replaceChildren();
   }
 
-  function maybeAddUserTrailPoint(logicalPoint, timestamp) {
+  function maybeAddUserTrailPoint(logicalPoint, timestamp, speed = null) {
     if (!Number.isFinite(logicalPoint?.x) || !Number.isFinite(logicalPoint?.y)) return;
     if (lastTrailFixTimestamp === timestamp) return;
     lastTrailFixTimestamp = timestamp;
     pruneUserTrail(timestamp);
+    if (Number.isFinite(speed) && speed < USER_TRAIL_MIN_SPEED_MPS) return;
     const last = userTrailPoints[userTrailPoints.length - 1];
     if (last) {
       const dx = logicalPoint.x - last.x;
       const dy = logicalPoint.y - last.y;
       if (Math.hypot(dx, dy) < USER_TRAIL_MIN_DISTANCE) return;
     }
-    const el = document.createElement("div");
-    el.className = "user-trail-point";
-    const point = { el, x: logicalPoint.x, y: logicalPoint.y, timestamp };
-    positionUserTrailPoint(point);
-    userTrailLayer.appendChild(el);
+    const point = { x: logicalPoint.x, y: logicalPoint.y, timestamp };
     userTrailPoints.push(point);
     while (userTrailPoints.length > USER_TRAIL_MAX_POINTS) {
-      const removed = userTrailPoints.shift();
-      removed?.el.remove();
+      userTrailPoints.shift();
     }
-    window.setTimeout(() => {
-      const idx = userTrailPoints.indexOf(point);
-      if (idx >= 0) {
-        userTrailPoints.splice(idx, 1);
-        point.el.remove();
-      }
-    }, USER_TRAIL_LIFETIME_MS + 200);
   }
 
   function hideUserLocation() {
@@ -2145,8 +2144,8 @@
     userPin.style.left = mapX(logicalPoint.x) + "px";
     userPin.style.top = mapY(logicalPoint.y) + "px";
     userPin.style.transform = `translate(-50%, -100%) scale(${1 / scl})`;
-    maybeAddUserTrailPoint(logicalPoint, latestGeoFix.timestamp || Date.now());
-    updateUserTrailDisplay();
+    maybeAddUserTrailPoint(logicalPoint, latestGeoFix.timestamp || Date.now(), latestGeoFix.speed);
+    updateUserTrailDisplay(latestGeoFix.timestamp || Date.now());
     if (Number.isFinite(latestHeading)) {
       userPinHeading.style.transform = `translateX(-50%) rotate(${latestHeading}deg)`;
       userPin.classList.add("has-heading");
@@ -2187,6 +2186,7 @@
         lat: shifted.lat,
         lon: shifted.lon,
         accuracy: position.coords.accuracy,
+        speed: position.coords.speed,
         timestamp: position.timestamp,
       };
       updateUserLocationDisplay();
@@ -2372,11 +2372,11 @@
       fLocate.disabled = true;
       setGpsStatus("GPS unavailable", "error");
     }
+    resetView();
+    readHash();
     if (navigator.geolocation && fLocate.checked) {
       startGeolocationWatch(false);
     }
-    resetView();
-    readHash();
   }
   if (img.complete) init(); else img.addEventListener("load", init, { once: true });
   window.addEventListener("resize", () => {
