@@ -90,6 +90,7 @@
   .search-result + .search-result { border-top:1px solid rgba(255,255,255,0.08); }
   .search-result-top { display:flex; gap:8px; align-items:baseline; }
   .search-result-code { font-size:11px; font-weight:700; letter-spacing:0.04em; color:#fff200; }
+  .search-result-code.schedule { color:#ffb54d; }
   .search-result-name { font-size:12px; color:#f3f3f3; }
   .search-result-meta { font-size:10px; color:#aaa; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
   .search-result-more {
@@ -149,10 +150,44 @@
   .index-hotspot {
     position:absolute; z-index:3; cursor:pointer;
     border-radius:3px; border:1px solid transparent;
+    overflow:visible;
   }
   .index-hotspot.index-hit {
     background:rgba(255,242,0,0.18);
     border-color:rgba(255,242,0,0.65);
+  }
+  .index-hotspot::after {
+    content:"";
+    position:absolute;
+    left:-18px;
+    top:calc(50% - 13px);
+    right:auto;
+    transform:none;
+    width:27px;
+    height:27px;
+    border-radius:50%;
+    border:1px solid rgba(159,255,166,0.72);
+    background:rgba(13,24,13,0.96);
+    box-shadow:0 0 0 1px rgba(0,0,0,0.55), 0 0 10px rgba(127,245,138,0.35);
+    color:#c9ffd0;
+    font-size:16px;
+    line-height:27px;
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+  }
+  .index-hotspot.visited::after {
+    content:"✓";
+    opacity:1;
+  }
+  .index-hotspot[data-map-source="highres"]::after {
+    left:70%;
+    top:50%;
+    transform:translate(-50%, -50%);
+    width:40px;
+    height:40px;
+    font-size:24px;
+    line-height:40px;
   }
   /* search-hit markers: big pulsing pin that sits just above the hotspot */
   .hit-pin {
@@ -326,6 +361,7 @@
     display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:start;
     gap:8px;
   }
+  .details-title-row { align-items:center; }
   .details-meta-row { margin-top:6px; }
   .details-title {
     margin:0; font-size:18px; line-height:1.2;
@@ -353,11 +389,46 @@
     position:static;
     display:flex; gap:6px; align-items:center; justify-content:flex-end;
     margin:0;
+    flex-wrap:nowrap;
+    min-width:0;
+  }
+  .details-visit-toggle {
+    display:flex; align-items:center; gap:4px;
+    height:28px; padding:0 8px;
+    background:#222; color:#ddd; border:1px solid #444; border-radius:5px;
+    cursor:pointer; user-select:none; white-space:nowrap;
+    font-size:11px; line-height:1;
+  }
+  .details-visit-toggle:hover { border-color:#777; background:#2b2b2b; }
+  .details-visit-toggle input {
+    width:12px; height:12px; margin:0;
+    accent-color:#7ff58a;
+    flex:0 0 auto;
+  }
+  .details-visit-toggle.locked {
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+  .details-visit-toggle.locked:hover { background:#222; border-color:#444; }
+  .details-visit-toggle.locked input { cursor:not-allowed; }
+  .details-visit-badge {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:1px 6px;
+    border-radius:999px;
+    border:1px solid rgba(127,245,138,0.42);
+    background:rgba(28,58,28,0.34);
+    color:#c8ffd1;
+    font-size:10px;
+    line-height:1.2;
+    white-space:nowrap;
   }
   .details-icon {
     position:relative; width:28px; height:28px; padding:0;
     background:#222; color:#eee; border:1px solid #444; border-radius:5px;
     cursor:pointer;
+    flex:0 0 auto;
   }
   .details-icon:hover { border-color:#777; background:#2b2b2b; }
   .details-icon::before, .details-icon::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); }
@@ -439,12 +510,19 @@
       border-radius:3px;
     }
     .details-actions { gap:3px; }
+    .details-visit-toggle {
+      height:24px;
+      padding:0 6px;
+      font-size:10px;
+    }
+    .details-visit-toggle input { width:10px; height:10px; }
     .details-icon {
       width:18px; height:18px; border-radius:3px;
     }
     .details-close::before, .details-close::after { width:9px; height:1.25px; }
     .details-size::before { width:7px; height:7px; border-width:1.25px; }
     .details-panel.full .details-size::before { width:9px; height:1.25px; }
+    .details-visit-badge { font-size:9px; padding:1px 5px; }
   }
 
   /* install / offline banner */
@@ -528,6 +606,12 @@
   }
   .about-callout strong {
     color:#ffb36b;
+  }
+  .about-callout p {
+    margin:0 0 8px;
+  }
+  .about-callout p:last-child {
+    margin-bottom:0;
   }
   .about-inline-link {
     appearance:none; background:none; border:0; padding:0;
@@ -640,13 +724,18 @@
     margin:0; width:13px; height:13px;
   }
   .schedule-category-filters {
-    display:flex; gap:6px; align-items:center; flex-wrap:nowrap;
-    overflow:auto hidden;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    align-items:flex-start;
     padding-bottom:2px;
-    scrollbar-width:none;
   }
-  .schedule-category-filters::-webkit-scrollbar {
-    display:none;
+  .schedule-category-filter-row {
+    display:flex;
+    gap:6px;
+    align-items:center;
+    flex-wrap:nowrap;
+    min-width:0;
   }
   .schedule-category-filter {
     display:inline-flex; align-items:center; gap:4px;
@@ -659,6 +748,7 @@
   .schedule-category-filter input {
     margin:0; width:12px; height:12px;
   }
+  .schedule-category-filter.starred-filter span { color:#ffd65b; }
   .schedule-category-filter.burn span { color:#ffc15a; }
   .schedule-category-filter.music span,
   .schedule-category-filter.performance span { color:#f6a3d8; }
@@ -674,6 +764,7 @@
   .schedule-content {
     flex:1 1 auto; min-height:0; overflow:auto;
     padding:12px 14px 10px;
+    touch-action:pan-x pan-y;
   }
   .schedule-detail {
     flex:0 0 auto; border-top:1px solid #333;
@@ -681,6 +772,34 @@
     padding:12px 14px 14px;
     max-height:min(30vh, 250px);
     overflow:auto;
+  }
+  .schedule-detail.editor-mode {
+    max-height:none;
+    height:clamp(320px, 42vh, 520px);
+    overflow:auto;
+  }
+  .schedule-detail.editor-mode .schedule-detail-grip {
+    position:sticky;
+    top:0;
+    z-index:3;
+    margin:-12px -14px 10px;
+    height:16px;
+    cursor:ns-resize;
+    background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.01));
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    touch-action:none;
+  }
+  .schedule-detail.editor-mode .schedule-detail-grip::before {
+    content:"";
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:42px;
+    height:3px;
+    margin-left:-21px;
+    margin-top:-1px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.18);
   }
   .schedule-empty {
     color:#aaa; font-size:13px; line-height:1.4;
@@ -831,8 +950,15 @@
   .schedule-editor-grid {
     display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;
   }
+  .schedule-editor-times {
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap:8px;
+    align-items:end;
+  }
   .schedule-editor-field {
     display:grid; gap:4px;
+    min-width:0;
   }
   .schedule-editor-field.full {
     grid-column:1 / -1;
@@ -846,6 +972,16 @@
     cursor:pointer;
   }
   .schedule-editor-category input {
+    margin:0; width:13px; height:13px;
+  }
+  .schedule-editor-check {
+    display:inline-flex; align-items:center; gap:6px;
+    min-height:32px;
+    font-size:11px; color:#ccc;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .schedule-editor-check input {
     margin:0; width:13px; height:13px;
   }
   .schedule-editor-field label {
@@ -862,8 +998,15 @@
     min-height:74px; resize:vertical;
   }
   .schedule-editor-picker {
-    display:grid; gap:6px;
+    display:none;
+    gap:6px;
+    margin-top:6px;
+    padding:8px;
+    border:1px solid #3d3d3d;
+    border-radius:6px;
+    background:#171717;
   }
+  .schedule-editor-picker.open { display:grid; }
   .schedule-editor-picker-list {
     display:flex; flex-wrap:wrap; gap:6px; max-height:120px; overflow:auto;
     padding:2px 0;
@@ -1218,8 +1361,13 @@
       justify-content:space-between;
     }
     .schedule-category-filters {
+      gap:3px;
+      width:100%;
+    }
+    .schedule-category-filter-row {
       gap:5px;
       width:100%;
+      justify-content:flex-start;
     }
     .schedule-category-filter {
       font-size:9px;
@@ -1228,6 +1376,10 @@
     .schedule-item-summary { gap:8px; padding:9px 10px; }
     .schedule-item-title { font-size:12px; }
     .schedule-editor-grid { grid-template-columns:1fr; }
+    .schedule-editor-times {
+      grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) auto;
+      gap:6px;
+    }
     .schedule-timeline-axis-track { height:28px; }
     .schedule-timeline-hour { font-size:9px; top:6px; }
   }
@@ -1287,12 +1439,13 @@
       <p>This interactive map is built from the official AfrikaBurn 2026 site map and the 2026 WTF Guide, with additional linking and offline-friendly navigation layered on top.</p>
       <p>It is meant to be a useful helper, not a replacement for participation. AfrikaBurn works best when people look up, wander, talk to strangers, follow curiosity, and let the city surprise them. Use the map when it helps, then put the phone away again. If this tool gets you somewhere interesting, helps you help someone else, helps you find a loo, or saves you when you are lost in the dust, that is enough.</p>
       <p>Please do not let the map become the whole experience. Some of the best parts of the burn are unplanned, not on the schedule, or found by accident. Radical self-reliance matters, but so does immediacy, participation, gifting, and being present with the people around you.</p>
-      <p>Developed by Chris (AKA The Damn Dirty Hippie) from the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys">Greasemonkeys</button>. Feel free to pop by and say hi, or thanks, in person.</p>
+      <div class="about-callout">
+        <p><strong>Location warning:</strong> map locations may be incorrect, may change during the burn, and reality sometimes overwrites the map.</p>
+        <p><strong>Event warning:</strong> some events, times, names, or links may be missing or wrong. Please treat the schedule as a helpful guide and double-check anything important on site or with the people running the event.</p>
+      </div>
+      <p>Developed by Chris (AKA The Damn Dirty Hippie) from the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys">Greasemonkeys</button>. Feel free to pop by and say hi, or thanks, in person. Feedback, suggestions, or bugs/issues can be emailed to <a href="mailto:chris.laidler+ab@gmail.com">chris.laidler+ab@gmail.com</a>.</p>
       <p>The original interactive map project was created by Bernard from <button type="button" class="about-inline-link" data-about-search="Camp 404">camp 404</button>.</p>
-      <div class="about-callout"><strong>Location warning:</strong> map locations may be incorrect, may change during the burn, and reality sometimes overwrites the map.</div>
       <p>This is an independent helper tool. There are no guarantees, and some information may still be incomplete or incorrect, but care has been taken to make it as accurate and useful as possible. Live GPS includes a short recent-movement trail. Orientation / heading information is only as accurate as the phone; a mis-calibrated compass can lead to inaccurate heading display.</p>
-      <p>Please email <a href="mailto:chris.laidler+ab@gmail.com">chris.laidler+ab@gmail.com</a> with feedback, suggestions, or bugs/issues.</p>
-      <p>Some events, times, names, or links may be missing or wrong. Please treat the schedule as a helpful guide and double-check anything important on site or with the people running the event.</p>
       <div class="about-links">
         <a href="https://www.afrikaburn.org/wp-content/uploads/2026/04/2026_Site_map.pdf" target="_blank" rel="noopener noreferrer">Official AfrikaBurn 2026 site map</a>
         <a href="https://www.afrikaburn.org/binnekringblog/afrikaburn-2026-wtf/" target="_blank" rel="noopener noreferrer">Official AfrikaBurn 2026 WTF Guide</a>
@@ -1402,14 +1555,17 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.21.14";
-  const APP_CACHE_VERSION = "v42";
+  const APP_VERSION = "2026.04.22.1";
+  const APP_CACHE_VERSION = "v43";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const EMPTY_SCHEDULE_DATA = { days: [], entries: [], byDate: {}, byLinkedCode: {}, series: [], seriesById: {}, seriesByLinkedCode: {} };
   const baseScheduleData = typeof SCHEDULE_DATA !== "undefined" ? SCHEDULE_DATA : EMPTY_SCHEDULE_DATA;
   const SCHEDULE_STAR_STORAGE_KEY = "ab-schedule-stars";
   const SCHEDULE_CUSTOM_STORAGE_KEY = "ab-schedule-custom-events";
+  const SCHEDULE_EDITOR_HEIGHT_STORAGE_KEY = "ab-schedule-editor-height";
   const USER_TRAIL_SETTING_STORAGE_KEY = "ab-user-trail-setting";
+  const ABOUT_SEEN_STORAGE_KEY = "ab-about-seen";
+  const VISITED_ENTRY_STORAGE_KEY = "ab-map-visited-entries";
   const SCHEDULE_CATEGORY_OPTIONS = [
     { key: "Burn", label: "Burn", shortLabel: "Burn" },
     { key: "Music", label: "Music", shortLabel: "Music" },
@@ -1464,6 +1620,8 @@
   const detailsBody = document.getElementById("details-body");
   const detailsSize = document.getElementById("details-size");
   const detailsClose = document.getElementById("details-close");
+  let detailsVisitToggle = null;
+  let detailsVisitToggleEntry = null;
   let detailsMode = "fit";
   let detailsDrag = null;
   let detailsUserHeight = null;
@@ -1490,7 +1648,7 @@
     return String(value).padStart(2, "0");
   }
 
-  function friendlyTimeLabel(start, end = "") {
+  function friendlyTimeLabel(start, end = "", endNextDay = false) {
     const render = (value) => {
       if (!/^\d{2}:\d{2}$/.test(value || "")) return "";
       const [hStr, mStr] = value.split(":");
@@ -1504,7 +1662,8 @@
     const startLabel = render(start);
     const endLabel = render(end);
     if (!startLabel) return "";
-    return endLabel ? `${startLabel} to ${endLabel}` : startLabel;
+    if (!endLabel) return startLabel;
+    return `${startLabel} to ${endLabel}${endNextDay ? " (+1d)" : ""}`;
   }
 
   function sanitizeLinkedCodes(value) {
@@ -1530,8 +1689,11 @@
       const id = item.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const start = /^\d{2}:\d{2}$/.test(item.start || "") ? item.start : "";
       const end = /^\d{2}:\d{2}$/.test(item.end || "") ? item.end : "";
+      const endNextDay = Boolean(item.endNextDay) || (start && end && end <= start);
       const linkedCodes = sanitizeLinkedCodes(item.linkedCodes);
       const categories = sanitizeScheduleCategories(item.categories);
+      const startMinutes = start ? Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5)) : null;
+      const endMinutes = end ? Number(end.slice(0, 2)) * 60 + Number(end.slice(3, 5)) : null;
       return {
         id,
         seriesId: id,
@@ -1542,11 +1704,12 @@
         kind: "event",
         kindLabel: "Event",
         linkedCodes,
-        timeLabel: friendlyTimeLabel(start, end) || "Custom time",
+        timeLabel: friendlyTimeLabel(start, end, endNextDay) || "Custom time",
         description: String(item.description || "").trim(),
         sourceLabel: "Personal",
-        sortStart: start ? Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5)) : null,
-        sortEnd: end ? Number(end.slice(0, 2)) * 60 + Number(end.slice(3, 5)) : null,
+        sortStart: startMinutes,
+        sortEnd: Number.isFinite(endMinutes) ? endMinutes + (endNextDay ? 24 * 60 : 0) : null,
+        endNextDay,
         categories,
         isCustom: true,
       };
@@ -1636,6 +1799,7 @@
 
   let starredScheduleIds = new Set(safeReadStorageJson(SCHEDULE_STAR_STORAGE_KEY, []));
   let customScheduleItems = safeReadStorageJson(SCHEDULE_CUSTOM_STORAGE_KEY, []);
+  let visitedEntryKeys = new Set(safeReadStorageJson(VISITED_ENTRY_STORAGE_KEY, []));
   scheduleData = buildRuntimeScheduleData(baseScheduleData, customScheduleItems);
 
   function persistStarredScheduleIds() {
@@ -1644,6 +1808,10 @@
 
   function persistCustomScheduleItems() {
     safeWriteStorageJson(SCHEDULE_CUSTOM_STORAGE_KEY, customScheduleItems);
+  }
+
+  function persistVisitedEntryKeys() {
+    safeWriteStorageJson(VISITED_ENTRY_STORAGE_KEY, [...visitedEntryKeys]);
   }
 
   function isScheduleItemStarred(itemId) {
@@ -1656,6 +1824,74 @@
     persistStarredScheduleIds();
     renderSchedule();
     syncUiHistory();
+  }
+
+  function normalizeVisitKeyPart(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function visitKeyForEntry(entryLike) {
+    if (!entryLike) return "";
+    return [
+      normalizeVisitKeyPart(entryLike.section),
+      normalizeVisitKeyPart(entryLike.code),
+      normalizeVisitKeyPart(entryLike.grid),
+      normalizeVisitKeyPart(entryLike.name),
+    ].join("|");
+  }
+
+  function isTrackableVisitEntry(entryLike) {
+    return ["theme", "art"].includes(String(entryLike?.section || "").toLowerCase());
+  }
+
+  function entryCenterLogicalPoint(entryLike) {
+    if (!entryLike) return null;
+    const x = Number(entryLike.x);
+    const y = Number(entryLike.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return {
+      x: x + Number(entryLike.w || 0) / 2,
+      y: y + Number(entryLike.h || 0) / 2,
+    };
+  }
+
+  function entryCenterGeoPoint(entryLike) {
+    return geoPointFromLogical(entryCenterLogicalPoint(entryLike));
+  }
+
+  function currentUserGeoPoint() {
+    if (!fLocate.checked) return null;
+    if (debugUserLogicalPoint) return geoPointFromLogical(debugUserLogicalPoint);
+    if (latestGeoFix) {
+      return {
+        lat: latestGeoFix.lat,
+        lon: latestGeoFix.lon,
+      };
+    }
+    return null;
+  }
+
+  function visitDistanceMetersForEntry(entryLike) {
+    return geoDistanceMeters(currentUserGeoPoint(), entryCenterGeoPoint(entryLike));
+  }
+
+  function canMarkVisitedForEntry(entryLike) {
+    if (!isTrackableVisitEntry(entryLike)) return false;
+    const key = visitKeyForEntry(entryLike);
+    if (visitedEntryKeys.has(key)) return true;
+    const distance = visitDistanceMetersForEntry(entryLike);
+    return Number.isFinite(distance) && distance <= 50;
+  }
+
+  function setEntryVisited(entryLike, visited) {
+    const key = visitKeyForEntry(entryLike);
+    if (!key || !isTrackableVisitEntry(entryLike)) return false;
+    if (visited) visitedEntryKeys.add(key);
+    else visitedEntryKeys.delete(key);
+    persistVisitedEntryKeys();
+    refreshVisitedMarkers();
+    syncVisitedControls();
+    return true;
   }
 
   function refreshScheduleData() {
@@ -1672,7 +1908,8 @@
   aboutVersion.textContent = `App version: ${APP_VERSION}`;
   aboutCacheVersion.textContent = `Cache version: ${APP_CACHE_VERSION}`;
 
-  function openAbout() {
+  function openAbout(markSeen = true) {
+    if (markSeen) localStorage.setItem(ABOUT_SEEN_STORAGE_KEY, "1");
     aboutBackdrop.classList.add("open");
     aboutBackdrop.setAttribute("aria-hidden", "false");
   }
@@ -2179,6 +2416,18 @@
     };
   }
 
+  function inverseAffinePoint(affine, x, y) {
+    if (!affine) return null;
+    const det = affine.xFromLon * affine.yFromLat - affine.xFromLat * affine.yFromLon;
+    if (!Number.isFinite(det) || Math.abs(det) < 1e-12) return null;
+    const dx = x - affine.xOffset;
+    const dy = y - affine.yOffset;
+    const lon = (affine.yFromLat * dx - affine.xFromLat * dy) / det;
+    const lat = (-affine.yFromLon * dx + affine.xFromLon * dy) / det;
+    if (![lon, lat].every(Number.isFinite)) return null;
+    return { lat, lon };
+  }
+
   function getGeoAffine() {
     if (cachedGeoAffine !== null) return cachedGeoAffine;
     cachedGeoAffine = solveAffineFromControlPoints(MAP_GEOREFERENCE.controlPoints);
@@ -2192,6 +2441,26 @@
       x: affine.xFromLon * lon + affine.xFromLat * lat + affine.xOffset,
       y: affine.yFromLon * lon + affine.yFromLat * lat + affine.yOffset,
     };
+  }
+
+  function geoPointFromLogical(logicalPoint) {
+    const affine = getGeoAffine();
+    if (!affine || !logicalPoint) return null;
+    return inverseAffinePoint(affine, Number(logicalPoint.x), Number(logicalPoint.y));
+  }
+
+  function geoDistanceMeters(a, b) {
+    if (!a || !b) return null;
+    const lat1 = Number(a.lat), lon1 = Number(a.lon), lat2 = Number(b.lat), lon2 = Number(b.lon);
+    if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return null;
+    const R = 6371000;
+    const toRad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * toRad;
+    const dLon = (lon2 - lon1) * toRad;
+    const s1 = Math.sin(dLat / 2);
+    const s2 = Math.sin(dLon / 2);
+    const aa = s1 * s1 + Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * s2 * s2;
+    return 2 * R * Math.atan2(Math.sqrt(aa), Math.sqrt(Math.max(0, 1 - aa)));
   }
 
   let userTrailLayer = null;
@@ -2434,11 +2703,16 @@
   let activeScheduleView = "timeline";
   let scheduleShowEvents = true;
   let scheduleShowOpen = true;
+  let scheduleStarredFilterEnabled = false;
   let scheduleTimelineNeedsMorningAnchor = true;
   let scheduleNowTimer = null;
   let scheduleTimelineZoom = 1;
+  let scheduleTimelinePinch = null;
+  let scheduleDetailResize = null;
+  let scheduleDetailEditorHeight = safeReadStorageJson(SCHEDULE_EDITOR_HEIGHT_STORAGE_KEY, null);
   const TIMELINE_START_MIN = 0;
-  const TIMELINE_END_MIN = 24 * 60;
+  const TIMELINE_END_MIN = 30 * 60;
+  const TIMELINE_OVERLAP_MIN = 6 * 60;
   const SCHEDULE_TIMELINE_ZOOM_MIN = 0.6;
   const SCHEDULE_TIMELINE_ZOOM_MAX = 3.4;
   const SCHEDULE_CATEGORY_FILTERS = SCHEDULE_CATEGORY_OPTIONS;
@@ -2454,7 +2728,7 @@
   const SOLAR_J1970 = 2440588;
   const SOLAR_J2000 = 2451545;
   const SOLAR_E = SOLAR_RAD * 23.4397;
-  const DEBUG_TIME_SHIFT_MS = 7 * 24 * 60 * 60 * 1000 * 0;
+  const DEBUG_TIME_SHIFT_MS = 0;
 
   function currentBurnLocalParts() {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -2493,10 +2767,16 @@
 
   function currentScheduleNowInfo() {
     const info = currentBurnNowInfo();
-    if (!info || activeScheduleDate !== info.dateIso) return null;
+    if (!info) return null;
+    if (activeScheduleDate === info.dateIso) {
+      return { minutes: info.minutes, label: info.label };
+    }
+    const currentIndex = scheduleData.days.findIndex((day) => day.date === info.dateIso);
+    const activeIndex = scheduleData.days.findIndex((day) => day.date === activeScheduleDate);
+    if (currentIndex === -1 || activeIndex !== currentIndex - 1 || info.minutes >= TIMELINE_OVERLAP_MIN) return null;
     return {
-      minutes: info.minutes,
-      label: info.label,
+      minutes: info.minutes + 24 * 60,
+      label: `${info.label} (+1d)`,
     };
   }
 
@@ -2605,6 +2885,28 @@
     ].filter((marker) => Number.isFinite(marker.minutes));
   }
 
+  function scheduleTimelineItemsForActiveDate() {
+    const activeIndex = scheduleData.days.findIndex((day) => day.date === activeScheduleDate);
+    const currentItems = scheduleItemsForCurrentFilters(scheduleData.byDate?.[activeScheduleDate] || []);
+    const carryItems = [];
+    const nextDay = activeIndex >= 0 ? scheduleData.days[activeIndex + 1] : null;
+    if (nextDay) {
+      const nextDayItems = scheduleItemsForCurrentFilters(scheduleData.byDate?.[nextDay.date] || []);
+      for (const item of nextDayItems) {
+        const start = Number.isFinite(item.sortStart) ? item.sortStart : null;
+        if (start == null || start >= TIMELINE_OVERLAP_MIN) continue;
+        carryItems.push({
+          item,
+          timelineDateOffset: 1,
+        });
+      }
+    }
+    return [
+      ...currentItems.map((item) => ({ item, timelineDateOffset: 0 })),
+      ...carryItems,
+    ];
+  }
+
   function mapEntryForCode(code) {
     return (mapEntriesByCode.get(code) || [])[0] || null;
   }
@@ -2676,49 +2978,53 @@
   }
 
   function displayRangeForItem(item) {
-    const startMeta = estimateScheduleStartMeta(item);
+    const source = item?.item || item;
+    const startMeta = estimateScheduleStartMeta(source);
     const start = startMeta.start;
-    const estimated = estimateScheduleEnd(item, start);
-    let end = estimated.end;
-    const clampedStart = Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN - 30, start));
-    const clampedEnd = Math.max(clampedStart + 30, Math.min(TIMELINE_END_MIN, end));
+    const estimated = estimateScheduleEnd(source, start);
+    const offset = Number.isFinite(item?.timelineDateOffset) ? item.timelineDateOffset * 24 * 60 : 0;
+    let end = estimated.end + offset;
+    const clampedTimelineEnd = TIMELINE_END_MIN;
+    const clampedStart = Math.max(TIMELINE_START_MIN, Math.min(clampedTimelineEnd - 30, start + offset));
+    const clampedEnd = Math.max(clampedStart + 30, Math.min(clampedTimelineEnd, end));
     return {
       start: clampedStart,
       end: clampedEnd,
       openEnded: estimated.openEnded,
       uncertainStart: startMeta.uncertainStart,
+      nextDay: Boolean(estimated.nextDay || item.timelineDateOffset),
     };
   }
 
   function estimateScheduleEnd(item, start) {
     if (Number.isFinite(item.sortEnd) && item.sortEnd > start) {
-      return { end: item.sortEnd, openEnded: false };
+      return { end: item.sortEnd, openEnded: false, nextDay: item.sortEnd >= 24 * 60 };
     }
     const label = String(item.timeLabel || "").toLowerCase();
     const description = String(item.description || "").toLowerCase();
     const combined = `${label} ${description}`;
     if (/\b(until|till)\s+late\b|\blate\b/.test(label)) {
-      return { end: 24 * 60, openEnded: true };
+      return { end: TIMELINE_END_MIN, openEnded: true, nextDay: true };
     }
     if (/from\s+\d|from\s+[a-z]/.test(label)) {
-      return { end: Math.min(24 * 60, start + (item.kind === "open" ? 4 * 60 : 3 * 60)), openEnded: true };
+      return { end: Math.min(TIMELINE_END_MIN, start + (item.kind === "open" ? 5 * 60 : 4 * 60)), openEnded: true, nextDay: start + (item.kind === "open" ? 5 * 60 : 4 * 60) > 24 * 60 };
     }
     if (/after dark|after sunset|friday evening|thursday evening|evening/.test(combined)) {
-      return { end: Math.min(24 * 60, start + 4 * 60), openEnded: true };
+      return { end: Math.min(TIMELINE_END_MIN, start + 6 * 60), openEnded: true, nextDay: start + 6 * 60 > 24 * 60 };
     }
     if (/sunset/.test(combined)) {
-      return { end: Math.min(24 * 60, start + 3.5 * 60), openEnded: true };
+      return { end: Math.min(TIMELINE_END_MIN, start + 5 * 60), openEnded: true, nextDay: start + 5 * 60 > 24 * 60 };
     }
     if (/afternoon/.test(combined)) {
-      return { end: Math.min(24 * 60, start + 3 * 60), openEnded: true };
+      return { end: Math.min(TIMELINE_END_MIN, start + 4 * 60), openEnded: true, nextDay: start + 4 * 60 > 24 * 60 };
     }
     if (/morning/.test(combined)) {
-      return { end: Math.min(24 * 60, start + 2.5 * 60), openEnded: true };
+      return { end: Math.min(TIMELINE_END_MIN, start + 3 * 60), openEnded: true, nextDay: start + 3 * 60 > 24 * 60 };
     }
     if (/sunrise/.test(combined)) {
-      return { end: Math.min(24 * 60, start + 90), openEnded: true };
+      return { end: Math.min(TIMELINE_END_MIN, start + 2 * 60), openEnded: true, nextDay: start + 2 * 60 > 24 * 60 };
     }
-    return { end: Math.min(24 * 60, start + (item.kind === "open" ? 3 * 60 : 2 * 60)), openEnded: true };
+    return { end: Math.min(TIMELINE_END_MIN, start + (item.kind === "open" ? 4 * 60 : 3 * 60)), openEnded: true, nextDay: start + (item.kind === "open" ? 4 * 60 : 3 * 60) > 24 * 60 };
   }
 
   function hourLabel(minutes) {
@@ -2772,8 +3078,12 @@
     });
   }
 
-  function scheduleFilteredItemsForActiveDate() {
+  function scheduleAgendaItemsForActiveDate() {
     return scheduleItemsForCurrentFilters(scheduleData.byDate?.[activeScheduleDate] || []);
+  }
+
+  function scheduleFilteredItemsForActiveDate() {
+    return scheduleAgendaItemsForActiveDate();
   }
 
   function scheduleTimelineAnchorFromClientX(clientX) {
@@ -2795,16 +3105,61 @@
     scheduleContent.scrollLeft = Math.max(0, Math.min(maxScroll, target));
   }
 
+  function scheduleTimelineTouchDistance(touches) {
+    if (!touches || touches.length < 2) return null;
+    const [a, b] = touches;
+    return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+  }
+
+  function scheduleTimelineTouchMidpoint(touches) {
+    if (!touches || touches.length < 2) return null;
+    const [a, b] = touches;
+    return {
+      clientX: (a.clientX + b.clientX) / 2,
+      clientY: (a.clientY + b.clientY) / 2,
+    };
+  }
+
+  function beginScheduleTimelinePinch(ev) {
+    if (activeScheduleView !== "timeline" || !scheduleBackdrop.classList.contains("open")) return;
+    if (ev.touches.length !== 2) {
+      scheduleTimelinePinch = null;
+      return;
+    }
+    const midpoint = scheduleTimelineTouchMidpoint(ev.touches);
+    const distance = scheduleTimelineTouchDistance(ev.touches);
+    if (!midpoint || !Number.isFinite(distance) || distance <= 0) return;
+    scheduleTimelinePinch = {
+      startZoom: scheduleTimelineZoom,
+      startDistance: distance,
+      anchorClientX: midpoint.clientX,
+    };
+  }
+
+  function updateScheduleTimelinePinch(ev) {
+    if (!scheduleTimelinePinch || ev.touches.length !== 2) return;
+    const distance = scheduleTimelineTouchDistance(ev.touches);
+    const midpoint = scheduleTimelineTouchMidpoint(ev.touches);
+    if (!midpoint || !Number.isFinite(distance) || distance <= 0) return;
+    ev.preventDefault();
+    const factor = distance / scheduleTimelinePinch.startDistance;
+    setScheduleTimelineZoom(scheduleTimelinePinch.startZoom * factor, scheduleTimelinePinch.anchorClientX);
+  }
+
+  function endScheduleTimelinePinch(ev) {
+    if (ev.touches.length < 2) scheduleTimelinePinch = null;
+  }
+
   function rerenderScheduleTimelineAtAnchor(anchor = null) {
     if (activeScheduleView !== "timeline") return;
-    const items = scheduleFilteredItemsForActiveDate();
-    if (activeScheduleEventId && !items.some((item) => item.id === activeScheduleEventId)) {
+    const records = scheduleTimelineItemsForActiveDate();
+    if (activeScheduleEventId && !records.some((record) => record.item.id === activeScheduleEventId)) {
       activeScheduleEventId = null;
     }
-    if (!activeScheduleEventId && items.length) {
-      activeScheduleEventId = items[0].id;
+    if (!activeScheduleEventId && records.length) {
+      activeScheduleEventId = records[0].item.id;
     }
-    renderScheduleTimeline(items);
+    renderScheduleTimeline(records);
     attachScheduleSelectionHandlers();
     renderScheduleDetail(activeScheduleItem());
     syncScheduleNowTimer();
@@ -2847,9 +3202,15 @@
       window.clearInterval(scheduleNowTimer);
       scheduleNowTimer = null;
     }
+    const nowInfo = currentBurnNowInfo();
+    const nowIndex = nowInfo ? scheduleData.days.findIndex((day) => day.date === nowInfo.dateIso) : -1;
+    const activeIndex = scheduleData.days.findIndex((day) => day.date === activeScheduleDate);
     const shouldTrackNow = scheduleBackdrop.classList.contains("open")
       && activeScheduleView === "timeline"
-      && activeScheduleDate === currentBurnLocalDateIso()
+      && (
+        activeScheduleDate === currentBurnLocalDateIso() ||
+        (nowInfo && activeIndex === nowIndex - 1 && nowInfo.minutes < TIMELINE_OVERLAP_MIN)
+      )
       && !!scheduleData.byDate?.[activeScheduleDate];
     if (!shouldTrackNow) return;
     updateScheduleNowMarker();
@@ -2902,6 +3263,7 @@
   }
 
   function scheduleItemMatchesCategoryFilters(item) {
+    if (scheduleStarredFilterEnabled && !isScheduleItemStarred(item.id)) return false;
     const categories = item.categories || [];
     const enabled = SCHEDULE_CATEGORY_FILTERS.filter((filter) => scheduleCategoryState[filter.key]).map((filter) => filter.key);
     if (enabled.length === SCHEDULE_CATEGORY_FILTERS.length) return true;
@@ -2914,7 +3276,7 @@
   }
 
   function renderScheduleCategoryFilters() {
-    scheduleCategoryFilters.innerHTML = SCHEDULE_CATEGORY_FILTERS.map((filter) => {
+    const filterHtml = (filter) => {
       const className = scheduleCategoryClassName(filter.key);
       const checked = scheduleCategoryState[filter.key] ? " checked" : "";
       return `
@@ -2923,7 +3285,28 @@
           <span>${escapeHtml(filter.shortLabel)}</span>
         </label>
       `;
-    }).join("");
+    };
+    const byKey = Object.fromEntries(SCHEDULE_CATEGORY_FILTERS.map((filter) => [filter.key, filter]));
+    const starredHtml = `
+      <label class="schedule-category-filter starred-filter" title="Show only starred items">
+        <input type="checkbox" data-schedule-starred-only${scheduleStarredFilterEnabled ? " checked" : ""}>
+        <span>Starred</span>
+      </label>
+    `;
+    const topRowKeys = ["Burn", "Music", "Food & Drink"];
+    const bottomRowKeys = SCHEDULE_CATEGORY_FILTERS
+      .map((filter) => filter.key)
+      .filter((key) => !topRowKeys.includes(key));
+    const topRowHtml = topRowKeys.map((key) => filterHtml(byKey[key])).join("");
+    const bottomRowHtml = bottomRowKeys.map((key) => filterHtml(byKey[key])).join("");
+    scheduleCategoryFilters.innerHTML = `
+      <div class="schedule-category-filter-row">
+        ${starredHtml}${topRowHtml}
+      </div>
+      <div class="schedule-category-filter-row">
+        ${bottomRowHtml}
+      </div>
+    `;
     for (const input of scheduleCategoryFilters.querySelectorAll("[data-schedule-category]")) {
       input.addEventListener("change", () => {
         scheduleCategoryState[input.dataset.scheduleCategory] = input.checked;
@@ -2931,6 +3314,11 @@
         scrollScheduleSelectionIntoView();
       });
     }
+    scheduleCategoryFilters.querySelector("[data-schedule-starred-only]")?.addEventListener("change", (ev) => {
+      scheduleStarredFilterEnabled = ev.currentTarget.checked;
+      renderSchedule();
+      scrollScheduleSelectionIntoView();
+    });
   }
 
   function renderScheduleViewToggle() {
@@ -2963,6 +3351,9 @@
     }
     if (!scheduleShowEvents && !scheduleShowOpen) {
       return "Enable Events or Open times to see schedule entries for this burn day.";
+    }
+    if (scheduleStarredFilterEnabled) {
+      return "No starred items match the current filters for this burn day.";
     }
     if (!scheduleShowEvents) {
       return "No open times have been linked for this burn day yet.";
@@ -3001,8 +3392,8 @@
     `).join("");
   }
 
-  function computeTimelineLayout(items) {
-    const layoutItems = items.map((item) => ({ item, ...displayRangeForItem(item) }))
+  function computeTimelineLayout(records) {
+    const layoutItems = records.map((record) => ({ ...record, ...displayRangeForItem(record) }))
       .sort((a, b) => a.start - b.start || a.end - b.end || a.item.title.localeCompare(b.item.title));
     const laneEnds = [];
     let maxLane = 0;
@@ -3020,8 +3411,8 @@
     return { items: layoutItems, laneCount: Math.max(1, maxLane) };
   }
 
-  function renderScheduleTimeline(items) {
-    if (!items.length) {
+  function renderScheduleTimeline(records) {
+    if (!records.length) {
       scheduleContent.innerHTML = `<div class="schedule-empty">${escapeHtml(scheduleEmptyMessage())}</div>`;
       return;
     }
@@ -3030,8 +3421,8 @@
     const totalWidth = (TIMELINE_END_MIN - TIMELINE_START_MIN) * pxPerMinute;
     const laneHeight = timelineLanePx();
     const labelStep = timelineLabelStepHours();
-    const eventItems = items.filter((item) => item.kind === "event");
-    const openItems = items.filter((item) => item.kind === "open");
+    const eventItems = records.filter((record) => record.item.kind === "event");
+    const openItems = records.filter((record) => record.item.kind === "open");
     const eventLayout = computeTimelineLayout(eventItems);
     const openLayout = computeTimelineLayout(openItems);
     const eventLaneCount = eventLayout.items.length ? eventLayout.laneCount : 0;
@@ -3046,7 +3437,7 @@
       <div class="schedule-timeline-shell">
         <div class="schedule-timeline-axis">
           <div class="schedule-timeline-axis-track" style="width:${Math.round(totalWidth)}px">
-            ${Array.from({ length: 24 }, (_, i) => {
+            ${Array.from({ length: ((TIMELINE_END_MIN - TIMELINE_START_MIN) / 60) + 1 }, (_, i) => {
               if (i % labelStep !== 0) return "";
               const minute = i * 60;
               return `<div class="schedule-timeline-hour" style="left:${Math.round(minute * pxPerMinute)}px">${escapeHtml(hourLabel(minute))}</div>`;
@@ -3064,7 +3455,7 @@
               const left = Math.round((Math.max(TIMELINE_START_MIN, Math.min(TIMELINE_END_MIN, marker.minutes)) - TIMELINE_START_MIN) * pxPerMinute);
               return `<div class="schedule-timeline-sun-line" style="left:${left}px"></div>`;
             }).join("")}
-            ${Array.from({ length: 25 }, (_, i) => `
+            ${Array.from({ length: ((TIMELINE_END_MIN - TIMELINE_START_MIN) / 60) + 1 }, (_, i) => `
               <div class="schedule-timeline-vline" style="left:${Math.round(i * 60 * pxPerMinute)}px"></div>
             `).join("")}
             ${Array.from({ length: Math.max(1, eventLaneCount + openLaneCount) + 1 }, (_, i) => `
@@ -3074,7 +3465,7 @@
             ${[...eventLayout.items, ...openLayout.items.map((record) => ({ ...record, lane: record.lane + eventLaneCount }))].map((record) => {
               const top = Math.round(record.lane * laneHeight + 1);
               const height = Math.max(18, Math.round(laneHeight - 2));
-              const left = Math.round(record.start * pxPerMinute + 1);
+              const left = Math.round((record.start - TIMELINE_START_MIN) * pxPerMinute + 1);
               const width = Math.max(16, Math.round((record.end - record.start) * pxPerMinute - 2));
               const selected = record.item.id === activeScheduleEventId ? " selected" : "";
               const openEnded = record.openEnded ? " open-ended" : "";
@@ -3096,11 +3487,14 @@
   }
 
   function customScheduleFormValues(item = null) {
+    const endNextDay = Boolean(item?.endNextDay || (Number.isFinite(item?.sortStart) && Number.isFinite(item?.sortEnd) && item.sortEnd >= 24 * 60));
+    const endValue = Number.isFinite(item?.sortEnd) ? `${pad2(Math.floor((item.sortEnd % (24 * 60)) / 60))}:${pad2(item.sortEnd % 60)}` : "";
     return {
       title: item?.title || "",
       date: item?.date || activeScheduleDate || defaultScheduleDate() || baseScheduleData.days[0]?.date || "",
       start: Number.isFinite(item?.sortStart) ? `${pad2(Math.floor(item.sortStart / 60))}:${pad2(item.sortStart % 60)}` : "",
-      end: Number.isFinite(item?.sortEnd) ? `${pad2(Math.floor(item.sortEnd / 60))}:${pad2(item.sortEnd % 60)}` : "",
+      end: endValue,
+      endNextDay,
       linkedCodes: (item?.linkedCodes || []).join(", "),
       categories: sanitizeScheduleCategories(item?.categories || []),
       description: item?.description || "",
@@ -3162,13 +3556,23 @@
     const values = customScheduleFormValues(scheduleEditorState?.item || null);
     const linkedOptions = scheduleLinkableEntryOptions(values.linkedCodes);
     const isEditing = Boolean(scheduleEditorState?.item);
+    const editorHeight = Number.isFinite(scheduleDetailEditorHeight)
+      ? scheduleDetailEditorHeight
+      : Math.round(Math.min(Math.max(window.innerHeight * 0.42, 320), 520));
+    scheduleDetailEditorHeight = editorHeight;
+    scheduleDetail.style.height = `${editorHeight}px`;
+    scheduleDetail.classList.add("editor-mode");
     scheduleDetail.innerHTML = `
+      <div class="schedule-detail-grip" data-schedule-detail-resize title="Drag to resize"></div>
       <div class="schedule-detail-head">
         <div>
           <h3 class="schedule-detail-title">${isEditing ? "Edit custom event" : "Add custom event"}</h3>
           <div class="schedule-detail-meta">
             <span class="schedule-live-chip">Personal</span>
           </div>
+        </div>
+        <div class="schedule-detail-actions">
+          <button type="button" class="schedule-detail-btn danger" data-schedule-editor-close aria-label="Cancel editing">×</button>
         </div>
       </div>
       <form class="schedule-editor" id="schedule-editor-form">
@@ -3183,10 +3587,28 @@
               ${scheduleData.days.map((day) => `<option value="${escapeHtml(day.date)}"${day.date === values.date ? " selected" : ""}>${escapeHtml(day.longLabel)}</option>`).join("")}
             </select>
           </div>
+          <div class="schedule-editor-field full">
+            <div class="schedule-editor-times">
+              <div class="schedule-editor-field">
+                <label for="schedule-editor-start">Start</label>
+                <input id="schedule-editor-start" name="start" type="time" value="${escapeHtml(values.start)}" required>
+              </div>
+              <div class="schedule-editor-field">
+                <label for="schedule-editor-end">End</label>
+                <input id="schedule-editor-end" name="end" type="time" value="${escapeHtml(values.end)}">
+              </div>
+              <div class="schedule-editor-field">
+                <label class="schedule-editor-check" for="schedule-editor-end-next-day">
+                  <input id="schedule-editor-end-next-day" name="endNextDay" type="checkbox"${values.endNextDay ? " checked" : ""}>
+                  <span>Ends next day</span>
+                </label>
+              </div>
+            </div>
+          </div>
           <div class="schedule-editor-field">
             <label for="schedule-editor-linked">Linked code</label>
             <input id="schedule-editor-linked" name="linkedCodes" type="text" value="${escapeHtml(values.linkedCodes)}" placeholder="e.g. BAD or BAD, XRK">
-            <div class="schedule-editor-picker">
+            <div class="schedule-editor-picker" id="schedule-editor-picker">
               <div class="schedule-editor-picker-list" id="schedule-editor-picker-list">
                 ${linkedOptions.length
                   ? linkedOptions.map((entry) => `
@@ -3197,14 +3619,6 @@
                   : '<div class="schedule-editor-picker-empty">No matches</div>'}
               </div>
             </div>
-          </div>
-          <div class="schedule-editor-field">
-            <label for="schedule-editor-start">Start</label>
-            <input id="schedule-editor-start" name="start" type="time" value="${escapeHtml(values.start)}" required>
-          </div>
-          <div class="schedule-editor-field">
-            <label for="schedule-editor-end">End</label>
-            <input id="schedule-editor-end" name="end" type="time" value="${escapeHtml(values.end)}">
           </div>
           <div class="schedule-editor-field full">
             <label>Categories</label>
@@ -3230,11 +3644,18 @@
     `;
     const form = document.getElementById("schedule-editor-form");
     const linkedInput = document.getElementById("schedule-editor-linked");
+    const pickerWrap = document.getElementById("schedule-editor-picker");
     const pickerList = document.getElementById("schedule-editor-picker-list");
+
+    function setPickerOpen(open) {
+      if (!pickerWrap) return;
+      pickerWrap.classList.toggle("open", Boolean(open));
+    }
 
     function renderLinkedCodePicker() {
       if (!linkedInput || !pickerList) return;
       const options = scheduleLinkableEntryOptions(linkedInput.value);
+      setPickerOpen(document.activeElement === linkedInput);
       pickerList.innerHTML = options.length
         ? options.map((entry) => `
           <button type="button" class="schedule-editor-pick" data-schedule-pick-code="${escapeHtml(entry.code)}" title="${escapeHtml(entry.name)}">
@@ -3243,6 +3664,7 @@
         `).join("")
         : '<div class="schedule-editor-picker-empty">No matches</div>';
       for (const button of pickerList.querySelectorAll("[data-schedule-pick-code]")) {
+        button.addEventListener("pointerdown", (ev) => ev.preventDefault());
         button.addEventListener("click", () => {
           const pickedCode = button.dataset.schedulePickCode || "";
           const codes = sanitizeLinkedCodes(linkedInput.value);
@@ -3254,8 +3676,26 @@
       }
     }
 
-      linkedInput?.addEventListener("input", renderLinkedCodePicker);
+    linkedInput?.addEventListener("focus", () => {
+      renderLinkedCodePicker();
+    });
+    linkedInput?.addEventListener("blur", () => {
+      window.setTimeout(() => {
+        if (document.activeElement !== linkedInput) setPickerOpen(false);
+      }, 0);
+    });
+    linkedInput?.addEventListener("input", renderLinkedCodePicker);
     renderLinkedCodePicker();
+    const resizeHandle = scheduleDetail.querySelector("[data-schedule-detail-resize]");
+    resizeHandle?.addEventListener("pointerdown", beginScheduleDetailResize);
+    resizeHandle?.addEventListener("pointermove", updateScheduleDetailResize);
+    resizeHandle?.addEventListener("pointerup", endScheduleDetailResize);
+    resizeHandle?.addEventListener("pointercancel", endScheduleDetailResize);
+
+    const cancelEditor = () => {
+      scheduleEditorState = null;
+      renderScheduleDetail(activeScheduleItem());
+    };
 
     form?.addEventListener("submit", (ev) => {
       ev.preventDefault();
@@ -3264,13 +3704,14 @@
       const date = String(fd.get("date") || "");
       const start = String(fd.get("start") || "");
       const end = String(fd.get("end") || "");
+      const endNextDay = fd.get("endNextDay") === "on";
       const description = String(fd.get("description") || "").trim();
       const linkedCodes = sanitizeLinkedCodes(fd.get("linkedCodes") || "");
       const categories = sanitizeScheduleCategories(fd.getAll("categories"));
       if (!title || !date || !start) return;
       const id = scheduleEditorState?.item?.id || `custom-${Date.now()}`;
       customScheduleItems = customScheduleItems.filter((item) => item.id !== id);
-      customScheduleItems.push({ id, title, date, start, end, description, linkedCodes, categories });
+      customScheduleItems.push({ id, title, date, start, end, endNextDay, description, linkedCodes, categories });
       persistCustomScheduleItems();
       refreshScheduleData();
       scheduleEditorState = null;
@@ -3279,13 +3720,15 @@
       renderSchedule();
       syncUiHistory();
     });
-    scheduleDetail.querySelector("[data-schedule-editor-cancel]")?.addEventListener("click", () => {
-      scheduleEditorState = null;
-      renderScheduleDetail(activeScheduleItem());
-    });
+    scheduleDetail.querySelector("[data-schedule-editor-cancel]")?.addEventListener("click", cancelEditor);
+    scheduleDetail.querySelector("[data-schedule-editor-close]")?.addEventListener("click", cancelEditor);
   }
 
   function renderScheduleDetail(item) {
+    scheduleDetail.classList.toggle("editor-mode", Boolean(scheduleEditorState));
+    if (!scheduleEditorState) {
+      scheduleDetail.style.height = "";
+    }
     if (scheduleEditorState) {
       renderScheduleEditor();
       return;
@@ -3343,6 +3786,44 @@
     });
   }
 
+  function clampScheduleEditorHeight(value) {
+    const min = 260;
+    const max = Math.max(min, Math.min(window.innerHeight * 0.72, 720));
+    return Math.max(min, Math.min(max, Math.round(value)));
+  }
+
+  function beginScheduleDetailResize(ev) {
+    if (!scheduleEditorState) return;
+    if (ev.button != null && ev.button !== 0) return;
+    const rect = scheduleDetail.getBoundingClientRect();
+    scheduleDetailResize = {
+      pointerId: ev.pointerId,
+      startY: ev.clientY,
+      startHeight: rect.height || scheduleDetailEditorHeight || 360,
+    };
+    scheduleDetail.classList.add("resizing");
+    try { ev.currentTarget?.setPointerCapture?.(ev.pointerId); } catch {
+      // ignore capture failures
+    }
+    ev.preventDefault();
+  }
+
+  function updateScheduleDetailResize(ev) {
+    if (!scheduleDetailResize || ev.pointerId !== scheduleDetailResize.pointerId) return;
+    const delta = scheduleDetailResize.startY - ev.clientY;
+    const nextHeight = clampScheduleEditorHeight(scheduleDetailResize.startHeight + delta);
+    scheduleDetailEditorHeight = nextHeight;
+    scheduleDetail.style.height = `${nextHeight}px`;
+  }
+
+  function endScheduleDetailResize(ev) {
+    if (!scheduleDetailResize) return;
+    if (ev && ev.pointerId !== scheduleDetailResize.pointerId) return;
+    scheduleDetail.classList.remove("resizing");
+    scheduleDetailResize = null;
+    safeWriteStorageJson(SCHEDULE_EDITOR_HEIGHT_STORAGE_KEY, scheduleDetailEditorHeight);
+  }
+
   function attachScheduleSelectionHandlers() {
     for (const button of scheduleContent.querySelectorAll("[data-schedule-toggle]")) {
       button.addEventListener("click", () => {
@@ -3360,16 +3841,17 @@
   function renderSchedule() {
     renderScheduleDays();
     renderScheduleViewToggle();
-    const allItems = scheduleData.byDate?.[activeScheduleDate] || [];
-    const items = scheduleItemsForCurrentFilters(allItems);
-    if (activeScheduleEventId && !items.some((item) => item.id === activeScheduleEventId)) {
+    const agendaItems = scheduleAgendaItemsForActiveDate();
+    const timelineRecords = scheduleTimelineItemsForActiveDate();
+    const activeItems = activeScheduleView === "timeline" ? timelineRecords.map((record) => record.item) : agendaItems;
+    if (activeScheduleEventId && !activeItems.some((item) => item.id === activeScheduleEventId)) {
       activeScheduleEventId = null;
     }
-    if (!activeScheduleEventId && items.length) {
-      activeScheduleEventId = items[0].id;
+    if (!activeScheduleEventId && activeItems.length) {
+      activeScheduleEventId = activeItems[0].id;
     }
-    if (activeScheduleView === "timeline") renderScheduleTimeline(items);
-    else renderScheduleAgenda(items);
+    if (activeScheduleView === "timeline") renderScheduleTimeline(timelineRecords);
+    else renderScheduleAgenda(agendaItems);
     attachScheduleSelectionHandlers();
     renderScheduleDetail(activeScheduleItem());
     if (activeScheduleView === "timeline" && scheduleTimelineNeedsMorningAnchor) {
@@ -3454,6 +3936,10 @@
     const factor = Math.exp(-ev.deltaY * 0.0025);
     setScheduleTimelineZoom(scheduleTimelineZoom * factor, ev.clientX);
   }, { passive: false });
+  scheduleContent.addEventListener("touchstart", beginScheduleTimelinePinch, { passive: false });
+  scheduleContent.addEventListener("touchmove", updateScheduleTimelinePinch, { passive: false });
+  scheduleContent.addEventListener("touchend", endScheduleTimelinePinch, { passive: true });
+  scheduleContent.addEventListener("touchcancel", endScheduleTimelinePinch, { passive: true });
 
   const INDEX_COLUMNS = [
     {
@@ -3611,6 +4097,35 @@
     }
   }
   updateIndexHotspotsVisibility();
+
+  function refreshVisitedMarkers() {
+    for (const entry of data.entries) {
+      const visited = visitedEntryKeys.has(visitKeyForEntry(entry));
+      const hotspotsForEntry = indexHotspotsByEntry.get(entry) || [];
+      for (const el of hotspotsForEntry) {
+        el.classList.toggle("visited", visited);
+        el.dataset.visited = visited ? "1" : "0";
+      }
+    }
+  }
+
+  function syncVisitedControls() {
+    if (!detailsVisitToggle || !detailsVisitToggleEntry) return;
+    const entry = detailsVisitToggleEntry;
+    const key = visitKeyForEntry(entry);
+    const visited = visitedEntryKeys.has(key);
+    const canMark = visited || canMarkVisitedForEntry(entry);
+    detailsVisitToggle.checked = visited;
+    detailsVisitToggle.disabled = !canMark;
+    detailsVisitToggle.classList.toggle("locked", !canMark);
+    detailsVisitToggle.title = visited
+      ? `Remove ${isTrackableVisitEntry(entry) && String(entry.section).toLowerCase() === "art" ? "Seen" : "Visited"}`
+      : canMark
+        ? `Mark as ${String(entry.section || "").toLowerCase() === "art" ? "Seen" : "Visited"}`
+        : "Move within about 50m to mark this item";
+  }
+
+  refreshVisitedMarkers();
 
   function clearIndexHighlights() {
     for (const el of indexHotspots) el.classList.remove("index-hit");
@@ -4009,6 +4524,8 @@
   function closeDetails() {
     activeDetailHighlight = null;
     showingUserLocationDetails = false;
+    detailsVisitToggle = null;
+    detailsVisitToggleEntry = null;
     detailsPanel.classList.remove("open", "full", "minimized", "dragging");
     detailsPanel.setAttribute("aria-hidden", "true");
     detailsMode = "fit";
@@ -4018,6 +4535,8 @@
   function openUserLocationDetails(mode = "half") {
     activeDetailHighlight = null;
     showingUserLocationDetails = true;
+    detailsVisitToggle = null;
+    detailsVisitToggleEntry = null;
     const point = currentUserLogicalPoint();
     const debugActive = Boolean(debugUserLogicalPoint);
     const accuracy = debugActive
@@ -4083,6 +4602,7 @@
     detailsPanel.setAttribute("aria-hidden", "false");
     if (mode === "half" || mode === "fit") fitMobileDetails();
     refreshHighlights();
+    syncVisitedControls();
   }
   function openDetails(el, mode = "half") {
     activeDetailHighlight = el;
@@ -4093,10 +4613,21 @@
     const grid = el.dataset.grid;
     const section = el.dataset.section;
     const title = detail?.title || el.dataset.name;
+    const visitLabel = String(section || "").toLowerCase() === "art" ? "Seen" : "Visited";
+    const visitKey = visitKeyForEntry(mapEntry || {
+      code,
+      name: el.dataset.name,
+      section,
+      grid,
+    });
+    const canMarkVisited = mapEntry ? canMarkVisitedForEntry(mapEntry) : false;
+    const isVisited = visitedEntryKeys.has(visitKey);
+    const visitBadgeHtml = isVisited ? `<span class="details-visit-badge">✓ ${escapeHtml(visitLabel)}</span>` : "";
     detailsKicker.innerHTML = `
       <span>${escapeHtml(code)}</span>
       <span>${escapeHtml(grid)}</span>
       <span class="badge-${section}">${escapeHtml(detail?.type || section)}</span>
+      ${visitBadgeHtml}
     `;
     detailsTitle.textContent = title;
     const linkedEntries = mapEntry ? linkedEntriesFor(mapEntry) : [];
@@ -4145,6 +4676,12 @@
         </div>
       </section>
     ` : "";
+    const visitControlHtml = isTrackableVisitEntry(mapEntry || { section }) ? `
+      <label class="details-visit-toggle${canMarkVisited || isVisited ? "" : " locked"}" title="${escapeHtml(isVisited ? `Remove ${visitLabel}` : (canMarkVisited ? `Mark as ${visitLabel}` : "Move within about 50m to mark this item"))}">
+        <input type="checkbox" data-map-visit-toggle="${escapeHtml(visitKey)}"${isVisited ? " checked" : ""}${canMarkVisited || isVisited ? "" : " disabled"}>
+        <span>${escapeHtml(visitLabel)}</span>
+      </label>
+    ` : "";
     detailsBody.innerHTML = detail ? `
       ${detailSection("Project Description", projectDescription)}
       ${detailSection("Details of Gift", detail.gift)}
@@ -4161,6 +4698,35 @@
       ${scheduleSectionHtml}
       ${tagsSectionHtml}
     `;
+    const detailsActions = detailsPanel.querySelector(".details-actions");
+    if (detailsActions) {
+      const existingVisitToggle = detailsActions.querySelector(".details-visit-toggle");
+      if (visitControlHtml) {
+        if (existingVisitToggle) {
+          existingVisitToggle.outerHTML = visitControlHtml;
+        } else {
+          detailsActions.insertAdjacentHTML("afterbegin", visitControlHtml);
+        }
+        const visitToggleLabel = detailsPanel.querySelector(".details-visit-toggle");
+        detailsVisitToggle = detailsPanel.querySelector("[data-map-visit-toggle]");
+        detailsVisitToggleEntry = mapEntry || null;
+        visitToggleLabel?.addEventListener("click", (ev) => {
+          if (!visitToggleLabel.classList.contains("locked")) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          window.alert("You've got to be close to mark it.");
+        });
+        detailsVisitToggle?.addEventListener("change", () => {
+          if (!detailsVisitToggleEntry) return;
+          setEntryVisited(detailsVisitToggleEntry, detailsVisitToggle.checked);
+          syncUiHistory();
+        });
+      } else if (existingVisitToggle) {
+        existingVisitToggle.remove();
+        detailsVisitToggle = null;
+        detailsVisitToggleEntry = null;
+      }
+    }
     for (const button of detailsBody.querySelectorAll(".detail-tag[data-search-tag]")) {
       button.addEventListener("click", () => {
         q.value = button.dataset.searchTag || "";
@@ -4877,6 +5443,7 @@
     userEventRouteLayer.replaceChildren();
     userToiletRouteLayer.replaceChildren();
     syncGpsStatusAction();
+    syncVisitedControls();
   }
 
   function updateUserLocationDisplay() {
@@ -4933,6 +5500,7 @@
     const accuracy = (!debugActive && Number.isFinite(latestGeoFix?.accuracy)) ? ` ±${Math.round(latestGeoFix.accuracy)}m` : "";
     setGpsStatus(debugActive ? "GPS debug" : `GPS live${accuracy}`, "ready");
     syncGpsStatusAction();
+    syncVisitedControls();
   }
 
   function stopGeolocationWatch() {
@@ -5069,7 +5637,71 @@
     return score;
   }
 
-  function renderSearchResults(hits, qs) {
+  function scoreScheduleSearchHit(item, qs) {
+    const query = String(qs || "").trim().toLowerCase();
+    if (!query) return 0;
+    const title = String(item.title || "").toLowerCase();
+    const summary = String(item.summaryLabel || "").toLowerCase();
+    const dayLabel = String(item.dayLabel || "").toLowerCase();
+    const timeLabel = String(item.timeLabel || "").toLowerCase();
+    const description = String(item.description || "").toLowerCase();
+    const linkedCodes = (item.linkedCodes || []).map((code) => String(code || "").toLowerCase());
+    const categories = (item.categories || []).map((category) => String(category || "").toLowerCase());
+    const tokens = query.split(/\s+/).filter(Boolean);
+    let score = 0;
+
+    if (title === query) score += 1200;
+    if (summary === query) score += 1100;
+    if (dayLabel === query) score += 1000;
+    if (timeLabel === query) score += 960;
+    if (linkedCodes.includes(query)) score += 880;
+    if (title.startsWith(query)) score += 720;
+    if (summary.startsWith(query)) score += 640;
+    if (dayLabel.startsWith(query)) score += 520;
+    if (timeLabel.startsWith(query)) score += 480;
+    if (title.includes(query)) score += 400;
+    if (summary.includes(query)) score += 320;
+    if (description.includes(query)) score += 220;
+    if (categories.includes(query)) score += 260;
+    for (const code of linkedCodes) {
+      if (code.startsWith(query)) score += 120;
+      else if (code.includes(query)) score += 70;
+    }
+    for (const category of categories) {
+      if (category.startsWith(query)) score += 110;
+      else if (category.includes(query)) score += 60;
+    }
+    for (const token of tokens) {
+      if (title === token) score += 210;
+      else if (title.startsWith(token)) score += 120;
+      else if (title.includes(token)) score += 60;
+      if (summary === token) score += 180;
+      else if (summary.startsWith(token)) score += 100;
+      else if (summary.includes(token)) score += 50;
+      if (dayLabel === token) score += 120;
+      else if (dayLabel.startsWith(token)) score += 80;
+      if (timeLabel === token) score += 100;
+      else if (timeLabel.startsWith(token)) score += 70;
+      if (linkedCodes.includes(token)) score += 120;
+      else if (linkedCodes.some((code) => code.startsWith(token) || code.includes(token))) score += 60;
+      if (categories.includes(token)) score += 100;
+      else if (categories.some((category) => category.startsWith(token) || category.includes(token))) score += 50;
+      if (description.includes(token)) score += 25;
+    }
+    return score;
+  }
+
+  function scheduleSearchEventEntries(qs) {
+    const query = String(qs || "").trim().toLowerCase();
+    if (!query) return [];
+    return scheduleData.entries
+      .filter((item) => item.kind === "event")
+      .map((item) => ({ item, score: scoreScheduleSearchHit(item, query) }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score || a.item.dayLabel.localeCompare(b.item.dayLabel) || a.item.title.localeCompare(b.item.title));
+  }
+
+  function renderSearchResults(results, qs) {
     if (!qs) {
       searchResultsExpanded = false;
       lastSearchResultsQuery = "";
@@ -5081,35 +5713,71 @@
       searchResultsExpanded = false;
       lastSearchResultsQuery = qs;
     }
-    if (!hits.length) {
+    if (!results.length) {
       searchResults.innerHTML = '<div class="search-result-more">No matches</div>';
       searchResults.classList.add("open");
       return;
     }
-    const ranked = hits
-      .map((el) => ({ el, score: scoreSearchHit(el, qs) }))
-      .sort((a, b) => b.score - a.score || a.el.dataset.name.localeCompare(b.el.dataset.name));
+    const ranked = results
+      .map((result) => ({
+        ...result,
+        score: result.kind === "schedule" ? scoreScheduleSearchHit(result.item, qs) : scoreSearchHit(result.el, qs),
+      }))
+      .sort((a, b) =>
+        b.score - a.score
+        || (a.kind === b.kind ? 0 : (a.kind === "schedule" ? 1 : -1))
+        || (a.kind === "schedule"
+          ? a.item.title.localeCompare(b.item.title)
+          : a.el.dataset.name.localeCompare(b.el.dataset.name))
+      );
     const shown = searchResultsExpanded ? ranked : ranked.slice(0, 10);
-    searchResults.innerHTML = shown.map(({ el }, index) => `
-      <button type="button" class="search-result" data-result-index="${index}">
-        <span class="search-result-top">
-          <span class="search-result-code">${escapeHtml(el.dataset.code)}</span>
-          <span class="search-result-name">${escapeHtml(el.dataset.name)}</span>
-        </span>
-        <span class="search-result-meta">
-          <span>${escapeHtml(el.dataset.grid)}</span>
-          <span class="badge-${escapeHtml(el.dataset.section)}">${escapeHtml(el.dataset.section)}</span>
-        </span>
-      </button>
-    `).join("") + (!searchResultsExpanded && ranked.length > shown.length
+    searchResults.innerHTML = shown.map((result, index) => {
+      if (result.kind === "schedule") {
+        const item = result.item;
+        return `
+          <button type="button" class="search-result" data-result-index="${index}" data-result-kind="schedule">
+            <span class="search-result-top">
+              <span class="search-result-code schedule">${escapeHtml(item.kindLabel || "Event")}</span>
+              <span class="search-result-name">${escapeHtml(item.title)}</span>
+            </span>
+            <span class="search-result-meta">
+              <span>${escapeHtml(item.dayLabel)}</span>
+              <span>${escapeHtml(item.timeLabel)}</span>
+              ${item.linkedCodes?.length ? `<span>${escapeHtml(item.linkedCodes.join(", "))}</span>` : ""}
+              ${item.categories?.length ? item.categories.map((category) => `<span class="schedule-category ${escapeHtml(scheduleCategoryClassName(category))}">${escapeHtml(category)}</span>`).join("") : ""}
+            </span>
+          </button>
+        `;
+      }
+      const el = result.el;
+      return `
+        <button type="button" class="search-result" data-result-index="${index}" data-result-kind="map">
+          <span class="search-result-top">
+            <span class="search-result-code">${escapeHtml(el.dataset.code)}</span>
+            <span class="search-result-name">${escapeHtml(el.dataset.name)}</span>
+          </span>
+          <span class="search-result-meta">
+            <span>${escapeHtml(el.dataset.grid)}</span>
+            <span class="badge-${escapeHtml(el.dataset.section)}">${escapeHtml(el.dataset.section)}</span>
+          </span>
+        </button>
+      `;
+    }).join("") + (!searchResultsExpanded && ranked.length > shown.length
       ? `<button type="button" class="search-result-more" data-expand-search-results>${ranked.length - shown.length} more matches</button>`
       : "");
     for (const button of searchResults.querySelectorAll(".search-result")) {
       button.addEventListener("click", () => {
-        const target = shown[Number(button.dataset.resultIndex)]?.el;
-        if (!target) return;
-        openDetails(target, isMobileDetails() ? "half" : "fit");
-        frameHits([target]);
+        const result = shown[Number(button.dataset.resultIndex)];
+        if (!result) return;
+        searchResultsExpanded = false;
+        searchResults.classList.remove("open");
+        if (result.kind === "schedule") {
+          openSchedule({ date: result.item.date, eventId: result.item.id });
+        } else {
+          const target = result.el;
+          openDetails(target, isMobileDetails() ? "half" : "fit");
+          frameHits([target]);
+        }
         syncUiHistory();
       });
     }
@@ -5148,9 +5816,21 @@
       el.classList.toggle("filtered-out", !sectionOk);
       if (qs && sectionOk && searchOk) hits.push(el);
     }
+    const scheduleHits = scheduleSearchEventEntries(qs);
     activeSearchHits = hits;
     refreshHighlights();
-    renderSearchResults(hits, qs);
+    renderSearchResults([
+      ...hits.map((el) => ({ kind: "map", el })),
+      ...scheduleHits.map((entry) => ({ kind: "schedule", item: entry.item })),
+    ], qs);
+    if (qs && hits.length === 0 && scheduleHits.length === 1) {
+      searchResultsExpanded = false;
+      searchResults.classList.remove("open");
+      openSchedule({ date: scheduleHits[0].item.date, eventId: scheduleHits[0].item.id });
+      syncUiHistory();
+      syncSearchUi();
+      return;
+    }
     syncSearchUi();
     if (qs && hits.length === 1) {
       openDetails(hits[0], isMobileDetails() ? "half" : "fit");
@@ -5262,6 +5942,9 @@
       startGeolocationWatch(false);
     }
     syncUiHistory(true);
+    if (!localStorage.getItem(ABOUT_SEEN_STORAGE_KEY)) {
+      openAbout(true);
+    }
   }
   if (img.complete) init(); else img.addEventListener("load", init, { once: true });
   window.addEventListener("popstate", (ev) => {
@@ -5273,6 +5956,11 @@
     scl = fitScale() * old_rel;
     clampPan();
     apply();
+    if (scheduleEditorState) {
+      scheduleDetailEditorHeight = clampScheduleEditorHeight(scheduleDetailEditorHeight || scheduleDetail.getBoundingClientRect().height);
+      scheduleDetail.style.height = `${scheduleDetailEditorHeight}px`;
+      safeWriteStorageJson(SCHEDULE_EDITOR_HEIGHT_STORAGE_KEY, scheduleDetailEditorHeight);
+    }
   });
 })();
 </script>
