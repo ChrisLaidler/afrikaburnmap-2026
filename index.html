@@ -545,6 +545,27 @@
     #install-banner { flex-direction:column; align-items:stretch; }
     #install-banner .row { display:flex; gap:8px; justify-content:flex-end; }
   }
+  #plain-message {
+    position:fixed; left:50%; bottom:24px; z-index:320;
+    transform:translate(-50%, 12px);
+    min-width:min(320px, calc(100vw - 24px));
+    max-width:min(420px, calc(100vw - 24px));
+    padding:10px 14px;
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:8px;
+    background:rgba(20,20,20,0.96);
+    color:#f0f0f0;
+    font-size:13px;
+    line-height:1.35;
+    box-shadow:0 8px 28px rgba(0,0,0,0.45);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .16s ease, transform .16s ease;
+  }
+  #plain-message.show {
+    opacity:1;
+    transform:translate(-50%, 0);
+  }
 
   #ios-help {
     position:fixed; inset:0; z-index:300; background:rgba(0,0,0,0.8);
@@ -1528,6 +1549,7 @@
     <button id="install-btn">Install</button>
   </div>
 </div>
+<div id="plain-message" role="status" aria-live="polite"></div>
 
 <div id="ios-help">
   <div class="panel">
@@ -1555,8 +1577,8 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.22.1";
-  const APP_CACHE_VERSION = "v43";
+  const APP_VERSION = "2026.04.22.2";
+  const APP_CACHE_VERSION = "v44";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const EMPTY_SCHEDULE_DATA = { days: [], entries: [], byDate: {}, byLinkedCode: {}, series: [], seriesById: {}, seriesByLinkedCode: {} };
   const baseScheduleData = typeof SCHEDULE_DATA !== "undefined" ? SCHEDULE_DATA : EMPTY_SCHEDULE_DATA;
@@ -1584,6 +1606,7 @@
   const img = document.getElementById("mapimg");
   const tip = document.getElementById("tip");
   const zlabel = document.getElementById("zlabel");
+  const plainMessage = document.getElementById("plain-message");
   const searchResults = document.getElementById("search-results");
   const searchClear = document.getElementById("search-clear");
   const header = document.querySelector("header");
@@ -1907,6 +1930,18 @@
   appVersion.textContent = `app ${APP_VERSION} · cache ${APP_CACHE_VERSION}`;
   aboutVersion.textContent = `App version: ${APP_VERSION}`;
   aboutCacheVersion.textContent = `Cache version: ${APP_CACHE_VERSION}`;
+  let plainMessageTimer = null;
+
+  function showPlainMessage(text, durationMs = 1800) {
+    if (!plainMessage) return;
+    plainMessage.textContent = text;
+    plainMessage.classList.add("show");
+    if (plainMessageTimer) window.clearTimeout(plainMessageTimer);
+    plainMessageTimer = window.setTimeout(() => {
+      plainMessage.classList.remove("show");
+      plainMessageTimer = null;
+    }, durationMs);
+  }
 
   function openAbout(markSeen = true) {
     if (markSeen) localStorage.setItem(ABOUT_SEEN_STORAGE_KEY, "1");
@@ -2713,8 +2748,8 @@
   const TIMELINE_START_MIN = 0;
   const TIMELINE_END_MIN = 30 * 60;
   const TIMELINE_OVERLAP_MIN = 6 * 60;
-  const SCHEDULE_TIMELINE_ZOOM_MIN = 0.6;
-  const SCHEDULE_TIMELINE_ZOOM_MAX = 3.4;
+  const SCHEDULE_TIMELINE_ZOOM_MIN = 0.35;
+  const SCHEDULE_TIMELINE_ZOOM_MAX = 8;
   const SCHEDULE_CATEGORY_FILTERS = SCHEDULE_CATEGORY_OPTIONS;
   const scheduleCategoryState = Object.fromEntries(SCHEDULE_CATEGORY_FILTERS.map((filter) => [filter.key, true]));
   const BURN_SITE_SUN = {
@@ -3263,12 +3298,16 @@
   }
 
   function scheduleItemMatchesCategoryFilters(item) {
-    if (scheduleStarredFilterEnabled && !isScheduleItemStarred(item.id)) return false;
     const categories = item.categories || [];
     const enabled = SCHEDULE_CATEGORY_FILTERS.filter((filter) => scheduleCategoryState[filter.key]).map((filter) => filter.key);
-    if (enabled.length === SCHEDULE_CATEGORY_FILTERS.length) return true;
-    if (!categories.length) return true;
-    return categories.some((category) => enabled.includes(category));
+    const starredMatch = scheduleStarredFilterEnabled && isScheduleItemStarred(item.id);
+    const categoryMatch =
+      enabled.length === SCHEDULE_CATEGORY_FILTERS.length
+        ? true
+        : enabled.length === 0
+          ? false
+          : !categories.length || categories.some((category) => enabled.includes(category));
+    return categoryMatch || starredMatch;
   }
 
   function scheduleCategoryHtml(item) {
@@ -3347,13 +3386,16 @@
   function scheduleEmptyMessage() {
     const noCategories = SCHEDULE_CATEGORY_FILTERS.every((filter) => !scheduleCategoryState[filter.key]);
     if (noCategories) {
+      if (scheduleStarredFilterEnabled) {
+        return "No starred items have been saved for this burn day yet.";
+      }
       return "Enable one or more category filters to see schedule entries for this burn day.";
     }
     if (!scheduleShowEvents && !scheduleShowOpen) {
       return "Enable Events or Open times to see schedule entries for this burn day.";
     }
     if (scheduleStarredFilterEnabled) {
-      return "No starred items match the current filters for this burn day.";
+      return "No schedule items match the current tag filters and starred selection for this burn day.";
     }
     if (!scheduleShowEvents) {
       return "No open times have been linked for this burn day yet.";
@@ -3933,7 +3975,7 @@
     if (activeScheduleView !== "timeline" || !scheduleBackdrop.classList.contains("open")) return;
     if (!ev.ctrlKey && !ev.metaKey) return;
     ev.preventDefault();
-    const factor = Math.exp(-ev.deltaY * 0.0025);
+    const factor = Math.exp(-ev.deltaY * 0.0065);
     setScheduleTimelineZoom(scheduleTimelineZoom * factor, ev.clientX);
   }, { passive: false });
   scheduleContent.addEventListener("touchstart", beginScheduleTimelinePinch, { passive: false });
@@ -4714,7 +4756,7 @@
           if (!visitToggleLabel.classList.contains("locked")) return;
           ev.preventDefault();
           ev.stopPropagation();
-          window.alert("You've got to be close to mark it.");
+          showPlainMessage("You've got to be close to mark it.");
         });
         detailsVisitToggle?.addEventListener("change", () => {
           if (!detailsVisitToggleEntry) return;
@@ -4828,8 +4870,10 @@
     if (!isMapInteractiveTarget(ev.target)) {
       hideTip();
       clearIndexHighlights();
-      closeDetails();
-      syncUiHistory();
+      if (!activeDetailHighlight) {
+        closeDetails();
+        syncUiHistory();
+      }
     }
   });
 
