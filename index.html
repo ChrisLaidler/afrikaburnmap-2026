@@ -155,6 +155,70 @@
     padding:2px 6px; border-radius:4px; display:none;
   }
   .offline-badge.show { display:inline-block; }
+
+  /* starred hotspots: gold fill + border, visible at rest (unlike normal hotspots) */
+  .hotspot.starred {
+    background: rgba(255, 210, 90, 0.35);
+    border-color: rgba(255, 210, 90, 0.95);
+  }
+  .hotspot.starred:hover {
+    background: rgba(255, 210, 90, 0.55);
+    border-color: #ffd75a;
+  }
+  .hotspot.starred.filtered-out { opacity: 0.15; }
+
+  /* star button inside the tooltip */
+  #tip { pointer-events: auto; }
+  #tip.pinned { padding-right: 36px; }
+  #tip .star-btn {
+    position:absolute; top:4px; right:4px;
+    width:26px; height:26px; padding:0; line-height:1;
+    background:transparent; color:#888; border:1px solid #444;
+    border-radius:4px; font-size:15px; cursor:pointer;
+  }
+  #tip .star-btn:hover { background:rgba(255,255,255,0.08); color:#ccc; }
+  #tip .star-btn.on { color:#ffd75a; border-color:#ffd75a; }
+  #tip .tap-hint { margin-top:4px; color:#888; font-size:10.5px; }
+
+  .badge-star { color:#ffd75a; }
+
+  /* first-run announcement banner */
+  #stars-announce {
+    position:fixed; top:60px; left:50%; transform:translateX(-50%);
+    background:#1a1a1a; color:#eee; border:1px solid #ffd75a;
+    padding:8px 36px 8px 12px; border-radius:6px;
+    font-size:13px; line-height:1.35; max-width:min(92vw, 420px);
+    box-shadow:0 4px 16px rgba(0,0,0,.5);
+    z-index:150; display:none;
+  }
+  #stars-announce.show { display:block; }
+  #stars-announce strong { color:#ffd75a; }
+  #stars-announce button {
+    position:absolute; top:2px; right:2px;
+    width:28px; height:28px; padding:0; line-height:1;
+    background:transparent; border:none; color:#aaa;
+    font-size:18px; cursor:pointer;
+  }
+  #stars-announce button:hover { color:#fff; }
+
+  /* tiny toast for share-copied feedback */
+  #toast {
+    position:fixed; left:50%; bottom:20px; transform:translate(-50%, 20px);
+    background:#1a1a1a; color:#eee; border:1px solid #444;
+    padding:8px 14px; border-radius:6px; font-size:13px;
+    box-shadow:0 4px 14px rgba(0,0,0,.4);
+    z-index:250; opacity:0; transition:opacity .15s, transform .15s;
+    pointer-events:none;
+  }
+  #toast.show { opacity:1; transform:translate(-50%, 0); }
+
+  #share-btn {
+    background:transparent; color:#ffd75a; border:1px solid #5a4a1a;
+    border-radius:4px; padding:3px 8px; font-size:11px; cursor:pointer;
+    display:none;
+  }
+  #share-btn:hover { background:rgba(255,215,90,0.1); }
+  #share-btn.show { display:inline-block; }
 </style>
 </head>
 <body>
@@ -164,6 +228,8 @@
   <div class="filters">
     <label><input type="checkbox" id="f_theme" checked> <span class="badge-theme">theme camps</span></label>
     <label><input type="checkbox" id="f_art" checked> <span class="badge-art">artworks</span></label>
+    <label><input type="checkbox" id="f_star"> <span class="badge-star">⭐ only</span></label>
+    <button id="share-btn" title="Copy a link to your starred places">share ⭐ <span id="share-count">0</span></button>
     <input type="search" id="q" placeholder="search name or code…">
   </div>
 </header>
@@ -180,6 +246,12 @@
 <div class="zoom-label" id="zlabel">100%</div>
 <div class="offline-badge" id="offline-badge">✓ saved for offline</div>
 <div id="tip" role="tooltip"></div>
+
+<div id="stars-announce">
+  <span><strong>⭐ New</strong> — tap a camp or artwork, then tap the star to save it. Your list stays on this device and works offline.</span>
+  <button id="stars-announce-close" aria-label="Dismiss">×</button>
+</div>
+<div id="toast"></div>
 
 <div id="install-banner">
   <div class="bmsg"><strong>Save for offline</strong> — install this map on your home screen so it works in the Tankwa with no signal.</div>
@@ -227,11 +299,24 @@
   mapDiv.style.width = NAT_W + "px";
   mapDiv.style.height = NAT_H + "px";
 
+  // ---- Stars (localStorage-backed favorites) ----
+  const STARS_KEY = "ab-stars";
+  function loadStars() {
+    try { return new Set(JSON.parse(localStorage.getItem(STARS_KEY) || "[]")); }
+    catch { return new Set(); }
+  }
+  function saveStars(set) {
+    localStorage.setItem(STARS_KEY, JSON.stringify([...set]));
+  }
+  const stars = loadStars();
+  const hotspotByCode = new Map();
+
   // Hotspots in natural-pixel coords. They sit inside mapDiv so they inherit its transform.
   const hotspots = [];
   for (const e of data.entries) {
     const el = document.createElement("div");
     el.className = "hotspot " + e.section;
+    if (stars.has(e.code)) el.classList.add("starred");
     el.dataset.code = e.code;
     el.dataset.name = e.name;
     el.dataset.grid = e.grid;
@@ -248,12 +333,13 @@
     el.style.height = nh + "px";
     mapDiv.appendChild(el);
     hotspots.push(el);
+    hotspotByCode.set(e.code, el);
 
-    el.addEventListener("mouseenter", showTip);
-    el.addEventListener("mousemove", moveTip);
-    el.addEventListener("mouseleave", hideTip);
-    // tap to show on touch
-    el.addEventListener("click", (ev) => { showTip(ev); ev.stopPropagation(); });
+    el.addEventListener("mouseenter", (ev) => { if (!pinnedEl) showTip(ev); });
+    el.addEventListener("mousemove",  (ev) => { if (!pinnedEl) moveTip(ev); });
+    el.addEventListener("mouseleave", ()   => { if (!pinnedEl) hideTip(); });
+    // tap/click pins the tooltip so the star button is tappable
+    el.addEventListener("click", (ev) => { showTip(ev, true); ev.stopPropagation(); });
   }
 
   // Pan/zoom state
@@ -390,17 +476,25 @@
     zoomAt(ev.clientX, ev.clientY, 2);
   });
 
-  // Tooltip
-  function showTip(ev) {
+  // Tooltip — pinned on click so the star button is tappable
+  let pinnedEl = null;
+  function showTip(ev, pin = false) {
     const el = ev.currentTarget;
     const code = el.dataset.code, name = el.dataset.name, grid = el.dataset.grid,
           section = el.dataset.section, src = el.dataset.src;
+    const isStar = stars.has(code);
     tip.innerHTML = `
       <div class="code">${code} · ${grid} · <span class="badge-${section}">${section}</span></div>
       <div class="name">${escapeHtml(name)}</div>
       ${src === "grid" ? `<div class="meta">approximate position (grid fallback)</div>` : ""}
+      ${!pin ? `<div class="tap-hint">${isStar ? "⭐ saved · tap to edit" : "tap to save ⭐"}</div>` : ""}
+      ${pin ? `<button class="star-btn${isStar ? " on" : ""}" data-code="${code}"
+              aria-label="${isStar ? "Remove star" : "Add star"}"
+              title="${isStar ? "Remove from favourites" : "Save to favourites"}">★</button>` : ""}
     `;
     tip.classList.add("show");
+    tip.classList.toggle("pinned", pin);
+    if (pin) pinnedEl = el;
     moveTip(ev);
   }
   function moveTip(ev) {
@@ -414,19 +508,80 @@
     tip.style.left = tpx + "px";
     tip.style.top  = tpy + "px";
   }
-  function hideTip() { tip.classList.remove("show"); }
+  function hideTip() {
+    if (pinnedEl) return;
+    tip.classList.remove("show");
+  }
+  function unpinAndHide() {
+    pinnedEl = null;
+    tip.classList.remove("show");
+  }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
-  // Hide tip on click outside / drag start
-  viewport.addEventListener("pointerdown", (ev) => {
-    if (!ev.target.classList.contains("hotspot")) hideTip();
+  // Star button: toggle on click inside the pinned tip
+  tip.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".star-btn");
+    if (!btn) return;
+    ev.stopPropagation();
+    toggleStar(btn.dataset.code);
+    const on = stars.has(btn.dataset.code);
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-label", on ? "Remove star" : "Add star");
+    btn.title = on ? "Remove from favourites" : "Save to favourites";
+    // Dismiss first-run announce on first interaction
+    dismissAnnounce();
+  });
+  // Hide tip on pointerdown outside (drag start, click on empty map, etc.)
+  document.addEventListener("pointerdown", (ev) => {
+    if (tip.contains(ev.target)) return;
+    if (ev.target.classList && ev.target.classList.contains("hotspot")) return;
+    unpinAndHide();
   });
 
   // Filters + search
   const fTheme = document.getElementById("f_theme");
   const fArt   = document.getElementById("f_art");
+  const fStar  = document.getElementById("f_star");
   const q      = document.getElementById("q");
+  const shareBtn   = document.getElementById("share-btn");
+  const shareCount = document.getElementById("share-count");
+  const toast      = document.getElementById("toast");
+
+  function toggleStar(code) {
+    if (stars.has(code)) stars.delete(code); else stars.add(code);
+    saveStars(stars);
+    const el = hotspotByCode.get(code);
+    if (el) el.classList.toggle("starred", stars.has(code));
+    refreshStarUI();
+    if (fStar.checked) applyFilter();
+  }
+  function refreshStarUI() {
+    const n = stars.size;
+    shareCount.textContent = n;
+    shareBtn.classList.toggle("show", n > 0);
+  }
+
+  function showToast(msg, ms = 1800) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("show"), ms);
+  }
+
+  // Share: copy a URL with #stars=CODE1,CODE2,... to the clipboard
+  shareBtn.addEventListener("click", async () => {
+    if (!stars.size) return;
+    const url = location.origin + location.pathname + "#stars=" + [...stars].join(",");
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast(`Link copied — ${stars.size} starred place${stars.size === 1 ? "" : "s"}`);
+    } catch {
+      // Fallback: put URL in hash so user can copy from the address bar
+      history.replaceState(null, "", "#stars=" + [...stars].join(","));
+      showToast("Copy the URL from the address bar to share");
+    }
+  });
 
   // Pin/overlay nodes are re-used across searches
   const hitOverlays = [];   // yellow rectangle overlays (one per hit)
@@ -476,21 +631,26 @@
   }
 
   function applyFilter() {
-    const showTheme = fTheme.checked, showArt = fArt.checked;
+    const showTheme = fTheme.checked, showArt = fArt.checked, starOnly = fStar.checked;
     const qs = q.value.trim().toLowerCase();
     const hits = [];
+    const starHits = [];
     for (const el of hotspots) {
       const sec = el.dataset.section;
       const sectionOk = (sec === "theme" && showTheme) || (sec === "art" && showArt);
+      const starOk = !starOnly || stars.has(el.dataset.code);
       const searchOk = !qs || el.dataset.code.toLowerCase().includes(qs)
                            || el.dataset.name.toLowerCase().includes(qs);
-      const visible = sectionOk && searchOk;
+      const visible = sectionOk && starOk && searchOk;
       el.classList.toggle("filtered-out", !visible);
       if (qs && visible) hits.push(el);
+      if (starOnly && visible) starHits.push(el);
     }
     markHits(hits);
     // If exactly one hit, fly to it. If a few hits, frame them.
     if (hits.length >= 1 && hits.length <= 12) frameHits(hits);
+    // When toggling "⭐ only" and there's no active search, frame the star set.
+    else if (starOnly && !qs && starHits.length >= 1 && starHits.length <= 40) frameHits(starHits);
   }
 
   function frameHits(hits) {
@@ -521,22 +681,87 @@
 
   fTheme.addEventListener("change", applyFilter);
   fArt.addEventListener("change", applyFilter);
+  fStar.addEventListener("change", applyFilter);
   q.addEventListener("input", () => {
     applyFilter();
-    // reflect query in URL hash so it's shareable
+    // reflect query in URL hash so it's shareable (preserve stars= if present)
     const v = q.value.trim();
-    history.replaceState(null, "", v ? "#q=" + encodeURIComponent(v) : "#");
+    const current = parseHash();
+    const parts = [];
+    if (v) parts.push("q=" + encodeURIComponent(v));
+    if (current.stars) parts.push("stars=" + current.stars);
+    history.replaceState(null, "", parts.length ? "#" + parts.join("&") : "#");
   });
 
-  // Honor ?q= / #q= on load
-  function readHash() {
+  function parseHash() {
     const h = location.hash.replace(/^#/, "");
-    const m = h.match(/(?:^|&)q=([^&]*)/);
-    if (m) { q.value = decodeURIComponent(m[1]); applyFilter(); }
+    const out = {};
+    for (const pair of h.split("&")) {
+      if (!pair) continue;
+      const i = pair.indexOf("=");
+      const k = i < 0 ? pair : pair.slice(0, i);
+      const v = i < 0 ? "" : pair.slice(i + 1);
+      out[k] = v;
+    }
+    return out;
+  }
+
+  // Honor #q= / #stars= on load
+  function readHash() {
+    const hp = parseHash();
+    if (hp.q) { q.value = decodeURIComponent(hp.q); applyFilter(); }
+    if (hp.stars) handleSharedStars(hp.stars);
+  }
+
+  function handleSharedStars(raw) {
+    const codes = decodeURIComponent(raw).split(",").map(s => s.trim()).filter(Boolean);
+    // Only import codes we actually know about
+    const known = codes.filter(c => hotspotByCode.has(c));
+    const incoming = known.filter(c => !stars.has(c));
+    if (!incoming.length) {
+      // Strip the hash so reloads don't re-prompt
+      if (known.length) history.replaceState(null, "", "#");
+      return;
+    }
+    const ok = confirm(
+      `Import ${incoming.length} starred place${incoming.length === 1 ? "" : "s"} from shared link?\n\n` +
+      `They'll be added to your saved list on this device.`
+    );
+    if (ok) {
+      for (const c of incoming) {
+        stars.add(c);
+        hotspotByCode.get(c).classList.add("starred");
+      }
+      saveStars(stars);
+      refreshStarUI();
+      showToast(`Added ${incoming.length} to your stars`);
+    }
+    history.replaceState(null, "", "#");
+  }
+
+  // First-run announcement: show once, unless the user already has stars (quiet returning users).
+  const announce = document.getElementById("stars-announce");
+  const announceClose = document.getElementById("stars-announce-close");
+  const ANNOUNCE_KEY = "ab-stars-announced";
+  function dismissAnnounce() {
+    if (!announce.classList.contains("show")) return;
+    announce.classList.remove("show");
+    localStorage.setItem(ANNOUNCE_KEY, "1");
+  }
+  announceClose.addEventListener("click", dismissAnnounce);
+  function maybeShowAnnounce() {
+    if (localStorage.getItem(ANNOUNCE_KEY)) return;
+    if (stars.size > 0) { localStorage.setItem(ANNOUNCE_KEY, "1"); return; }
+    setTimeout(() => announce.classList.add("show"), 800);
   }
 
   // Init once image loads (for accurate clamping — actually we use NAT_W/H so can init now)
-  function init() { resetView(); readHash(); }
+  function init() {
+    resetView();
+    refreshStarUI();
+    readHash();
+    maybeShowAnnounce();
+  }
   if (img.complete) init(); else img.addEventListener("load", init);
   window.addEventListener("resize", () => {
     // keep same logical zoom (relative to fit), then clamp
