@@ -335,9 +335,21 @@
     hotspots.push(el);
     hotspotByCode.set(e.code, el);
 
-    el.addEventListener("mouseenter", (ev) => { if (!pinnedEl) showTip(ev); });
-    el.addEventListener("mousemove",  (ev) => { if (!pinnedEl) moveTip(ev); });
-    el.addEventListener("mouseleave", ()   => { if (!pinnedEl) hideTip(); });
+    // Hover (mouse only) shows a non-pinned tip that follows the cursor.
+    // On touch we deliberately skip these so the first tap fires `click` directly
+    // (otherwise iOS treats the first tap as hover and you need a second tap to star).
+    el.addEventListener("pointerenter", (ev) => {
+      if (ev.pointerType !== "mouse") return;
+      if (!pinnedEl) showTip(ev);
+    });
+    el.addEventListener("pointermove", (ev) => {
+      if (ev.pointerType !== "mouse") return;
+      if (!pinnedEl) moveTip(ev);
+    });
+    el.addEventListener("pointerleave", (ev) => {
+      if (ev.pointerType !== "mouse") return;
+      if (!pinnedEl) hideTip();
+    });
     // tap/click pins the tooltip so the star button is tappable
     el.addEventListener("click", (ev) => { showTip(ev, true); ev.stopPropagation(); });
   }
