@@ -2132,8 +2132,16 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.23.6";
-  const APP_CACHE_VERSION = "v55";
+  const APP_VERSION = "2026.04.23.7";
+  const CACHE_NAME_PREFIX = "ab-map-";
+  async function getInstalledCacheVersion() {
+    if (!("caches" in window)) return null;
+    try {
+      const keys = await caches.keys();
+      const name = keys.find((k) => k.startsWith(CACHE_NAME_PREFIX));
+      return name ? name.slice(CACHE_NAME_PREFIX.length) : null;
+    } catch { return null; }
+  }
   const AUTO_REFRESH_SESSION_KEY = "ab-auto-refresh-cache-target";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const EMPTY_SCHEDULE_DATA = { days: [], entries: [], byDate: {}, byLinkedCode: {}, series: [], seriesById: {}, seriesByLinkedCode: {} };
@@ -2888,9 +2896,14 @@
     }
   }
 
-  appVersion.textContent = `app ${APP_VERSION} · cache ${APP_CACHE_VERSION}`;
+  appVersion.textContent = `app ${APP_VERSION} · cache …`;
   aboutVersion.textContent = `App version: ${APP_VERSION}`;
-  aboutCacheVersion.textContent = `Cache version: ${APP_CACHE_VERSION}`;
+  aboutCacheVersion.textContent = `Cache version: …`;
+  getInstalledCacheVersion().then((v) => {
+    if (!v) return;
+    appVersion.textContent = `app ${APP_VERSION} · cache ${v}`;
+    aboutCacheVersion.textContent = `Cache version: ${v}`;
+  });
   let plainMessageTimer = null;
 
   function showPlainMessage(text, durationMs = 1800) {
@@ -2973,8 +2986,8 @@
   async function maybeAutoRefreshAppBundle() {
     if (!navigator.onLine || document.visibilityState !== "visible") return;
     try {
-      const liveCacheVersion = await fetchLiveCacheVersion();
-      if (!liveCacheVersion || liveCacheVersion === APP_CACHE_VERSION) {
+      const [liveCacheVersion, installedCacheVersion] = await Promise.all([fetchLiveCacheVersion(), getInstalledCacheVersion()]);
+      if (!liveCacheVersion || liveCacheVersion === installedCacheVersion) {
         sessionStorage.removeItem(AUTO_REFRESH_SESSION_KEY);
         return;
       }

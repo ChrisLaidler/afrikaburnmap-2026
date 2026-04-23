@@ -1590,6 +1590,21 @@ const SCHEDULE_DATA = (() => {
     description: "The Sunrisers Coffee Rave — warm brewed coffee from 9 am till midday, with music and 40-odd sunnies turning the morning into a proper jol. Friday and Saturday only.",
   });
   addSeries({
+    id: "full-moon-rise",
+    title: "Full Moon Rise",
+    kind: "event",
+    days: "fri",
+    timeLabel: "6:15 pm to 7:45 pm",
+    sortStart: "18:15",
+    sortEnd: "19:45",
+    linkedCodes: [],
+    categories: ["community", "wellness"],
+    summaryLabel: "Fri 6:15 pm · Full Moon Rise — Tankwa Town",
+    description: "The moon is full at exactly 19:26 tonight. Step away for a moment, find a clear horizon to the east, and watch it rise as the sun sets in the west — one of nature's great double acts. The moon will appear large and golden as it clears the Tankwa plain. No programme, no stage, just the sky doing its thing.",
+    sourceLabel: "Astronomical calculation",
+  });
+
+  addSeries({
     id: "calling-all-crones",
     title: "Calling All Crones",
     kind: "event",
