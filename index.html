@@ -2717,16 +2717,20 @@
     const liveUpserts = (liveUpdates || []).filter((u) => u.action === "upsert" && u.id);
     const liveUpsertIds = new Set(liveUpserts.map((u) => String(u.id)));
 
+    // Custom items take priority over live items with the same ID (local edits of live events).
+    const customNormalized = normalizeCustomScheduleItems(customRaw);
+    const customIds = new Set(customNormalized.map((item) => String(item.id)));
+
     const entries = [
       ...(staticData.entries || [])
-        .filter((item) => !liveDeleteIds.has(String(item.id)) && !liveUpsertIds.has(String(item.id)))
+        .filter((item) => !liveDeleteIds.has(String(item.id)) && !liveUpsertIds.has(String(item.id)) && !customIds.has(String(item.id)))
         .map((item) => runtimeScheduleItemWithOverride({
           ...item,
           linkedCodes: [...(item.linkedCodes || [])],
           categories: [...(item.categories || [])],
         }, scheduleBaseOverrides[item.id])),
-      ...normalizeCustomScheduleItems(customRaw).filter((item) => !liveDeleteIds.has(String(item.id)) && !liveUpsertIds.has(String(item.id))),
-      ...normalizeCustomScheduleItems(liveUpserts, { isLive: true }).filter((item) => !liveDeleteIds.has(String(item.id))),
+      ...customNormalized.filter((item) => !liveDeleteIds.has(String(item.id))),
+      ...normalizeCustomScheduleItems(liveUpserts, { isLive: true }).filter((item) => !liveDeleteIds.has(String(item.id)) && !customIds.has(String(item.id))),
     ];
 
     entries.sort((a, b) =>
@@ -5308,7 +5312,8 @@
     const values = customScheduleFormValues(scheduleEditorState?.item || null);
     const linkedOptions = scheduleLinkableEntryOptions(values.linkedCodes);
     const isEditing = Boolean(scheduleEditorState?.item);
-    const editingBaseItem = Boolean(scheduleEditorState?.item && !scheduleEditorState.item.isCustom);
+    const editingLiveItem = Boolean(scheduleEditorState?.item?.isLive);
+    const editingBaseItem = Boolean(scheduleEditorState?.item && !scheduleEditorState.item.isCustom && !editingLiveItem);
     const editorHeight = Number.isFinite(scheduleDetailEditorHeight)
       ? scheduleDetailEditorHeight
       : Math.round(Math.min(Math.max(window.innerHeight * 0.42, 320), 520));
@@ -5319,9 +5324,9 @@
       <div class="schedule-detail-grip" data-schedule-detail-resize title="Drag to resize"></div>
       <div class="schedule-detail-head">
         <div>
-          <h3 class="schedule-detail-title">${isEditing ? (editingBaseItem ? "Edit schedule event" : "Edit custom event") : "Add custom event"}</h3>
+          <h3 class="schedule-detail-title">${isEditing ? (editingLiveItem ? "Edit live event" : editingBaseItem ? "Edit schedule event" : "Edit custom event") : "Add custom event"}</h3>
           <div class="schedule-detail-meta">
-            <span class="schedule-live-chip">${editingBaseItem ? "Local override" : "Personal"}</span>
+            <span class="schedule-live-chip${editingLiveItem ? " live-feed" : ""}">${editingLiveItem ? "Live — local edit" : editingBaseItem ? "Local override" : "Personal"}</span>
           </div>
         </div>
         <div class="schedule-detail-actions">
@@ -5475,27 +5480,20 @@
       const categories = sanitizeScheduleCategories(fd.getAll("categories"));
       if (!title || !date || !start) return;
       const editingItem = scheduleEditorState?.item || null;
-      if (editingItem && !editingItem.isCustom) {
+      if (editingItem && !editingItem.isCustom && !editingItem.isLive) {
+        // Base schedule event — save as local override
         const baseEventId = editingItem.baseEventId || editingItem.id;
         scheduleBaseOverrides[baseEventId] = {
-          title,
-          start,
-          end,
-          endNextDay,
-          estimatedStart,
-          estimatedEnd,
-          description,
-          linkedCodes,
-          categories,
+          title, start, end, endNextDay, estimatedStart, estimatedEnd,
+          description, linkedCodes, categories,
         };
         persistScheduleBaseOverrides();
       } else {
+        // Custom event or live event being edited locally — save to customScheduleItems
         const id = editingItem?.id || `custom-${Date.now()}`;
         const shareId = ensureCustomShareId({
           shareId: editingItem?.shareId || "",
-          title,
-          date,
-          start,
+          title, date, start,
         }, id);
         customScheduleItems = customScheduleItems.filter((item) => item.id !== id);
         customScheduleItems.push({ id, shareId, title, date, start, end, endNextDay, estimatedStart, estimatedEnd, description, linkedCodes, categories });
@@ -5584,10 +5582,14 @@
     scheduleDetail.querySelector("[data-schedule-delete]")?.addEventListener("click", () => {
       customScheduleItems = customScheduleItems.filter((entry) => entry.id !== item.id);
       persistCustomScheduleItems();
-      starredScheduleIds.delete(item.id);
-      persistStarredScheduleIds();
+      // If this was a local edit of a live event, the live version comes back — keep ID and star.
+      const liveVersionExists = Boolean(liveUpdateForId(item.id));
+      if (!liveVersionExists) {
+        starredScheduleIds.delete(item.id);
+        persistStarredScheduleIds();
+      }
       refreshScheduleData();
-      activeScheduleEventId = null;
+      activeScheduleEventId = liveVersionExists ? item.id : null;
       renderSchedule();
       syncUiHistory();
     });
