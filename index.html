@@ -266,6 +266,9 @@
   .user-trail-layer {
     position:absolute; inset:0; pointer-events:none; z-index:5;
   }
+  .user-selected-route-layer {
+    position:absolute; inset:0; pointer-events:none; z-index:4;
+  }
   .user-toilet-route-layer {
     position:absolute; inset:0; pointer-events:none; z-index:4;
   }
@@ -1638,7 +1641,7 @@
     </div>
     <div class="about-body">
       <p>This interactive map is built from the official AfrikaBurn 2026 site map and the 2026 WTF Guide, with additional linking and offline-friendly navigation layered on top.</p>
-      <p><strong>This map can be saved for offline use at the burn.</strong> The app is under active development, so revisit this site while you still have reception if you want the latest updates to download automatically before you head out of signal. There may also be newer content available at the burn on a local Wi-Fi version of the map hosted at OCC / <button type="button" class="about-inline-link" data-about-search="Radio Free Tankwa">RFT</button>.</p>
+      <p><strong>This map can be saved for offline use at the burn.</strong> The app is under active development, so revisit this site while you still have reception if you want the latest updates to download automatically before you head out of signal. There may also be newer content available at the burn on a local Wi-Fi version of the map hosted at <button type="button" class="about-inline-link" data-about-search="Radio Free Tankwa">RFT</button> and the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys">Greasemonkeys</button> camp.</p>
       <p>It is meant to be a useful helper, not a replacement for participation. AfrikaBurn works best when people look up, wander, talk to strangers, follow curiosity, and let the city surprise them. Use the map when it helps, then put the phone away again. If this tool gets you somewhere interesting, helps you help someone else, helps you find a loo, or saves you when you are lost in the dust, that is enough.</p>
       <p>Please do not let the map become the whole experience. Some of the best parts of the burn are unplanned, not on the schedule, or found by accident. Radical self-reliance matters, but so does immediacy, participation, gifting, and being present with the people around you.</p>
       <div class="about-callout">
@@ -1726,8 +1729,8 @@
               <span>Open times</span>
             </label>
             <label class="schedule-kind-filter">
-              <input type="checkbox" id="schedule-filter-hours">
-              <span>Operating hours</span>
+              <input type="checkbox" id="schedule-filter-now">
+              <span>Now</span>
             </label>
           </div>
         </div>
@@ -1800,8 +1803,8 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.23.1";
-  const APP_CACHE_VERSION = "v51";
+  const APP_VERSION = "2026.04.23.2";
+  const APP_CACHE_VERSION = "v52";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const EMPTY_SCHEDULE_DATA = { days: [], entries: [], byDate: {}, byLinkedCode: {}, series: [], seriesById: {}, seriesByLinkedCode: {} };
   const baseScheduleData = typeof SCHEDULE_DATA !== "undefined" ? SCHEDULE_DATA : EMPTY_SCHEDULE_DATA;
@@ -1866,6 +1869,7 @@
   const scheduleFilterEvents = document.getElementById("schedule-filter-events");
   const scheduleFilterOpen = document.getElementById("schedule-filter-open");
   const scheduleFilterHours = document.getElementById("schedule-filter-hours");
+  const scheduleFilterNow = document.getElementById("schedule-filter-now");
   const detailsPanel = document.getElementById("details-panel");
   const detailsCard = detailsPanel.querySelector(".details-card");
   const detailsGrip = document.getElementById("details-grip");
@@ -2260,6 +2264,9 @@
     "The burn happens out there, not in here. Go find some dust, some people, and a moment you did not plan.",
     "This is your reminder to stop navigating for a bit and start participating. Go be at the burn."
   ];
+  const USAGE_PROMPT_AFTERNOON_NIGHT_MESSAGES = [
+    "Been on the phone a while? Try Party Sense. Put the phone down, walk away from people and events, close your eyes, do a slow 360 turn, then wander off in the direction of the music that appeals to you most. Party Sense. Developed by the Tankwa Bush Mechanic and Damn Dirty Hippie."
+  ];
   let usagePromptTimer = null;
   let usagePromptNextAt = Date.now() + USAGE_PROMPT_DELAY_MS;
   let usagePromptLastIndex = -1;
@@ -2268,14 +2275,23 @@
     return Boolean(scheduleData.byDate?.[currentBurnLocalDateIso()]) && Boolean(currentUserLogicalPoint());
   }
 
+  function usagePromptMessagePool() {
+    const minutes = currentBurnNowInfo()?.minutes;
+    const afternoonNight = Number.isFinite(minutes) && (minutes >= 12 * 60 || minutes < 6 * 60);
+    return afternoonNight
+      ? [...USAGE_PROMPT_MESSAGES, ...USAGE_PROMPT_AFTERNOON_NIGHT_MESSAGES]
+      : USAGE_PROMPT_MESSAGES;
+  }
+
   function nextUsagePromptMessage() {
-    if (!USAGE_PROMPT_MESSAGES.length) return "";
-    let index = Math.floor(Math.random() * USAGE_PROMPT_MESSAGES.length);
-    if (USAGE_PROMPT_MESSAGES.length > 1 && index === usagePromptLastIndex) {
-      index = (index + 1 + Math.floor(Math.random() * (USAGE_PROMPT_MESSAGES.length - 1))) % USAGE_PROMPT_MESSAGES.length;
+    const pool = usagePromptMessagePool();
+    if (!pool.length) return "";
+    let index = Math.floor(Math.random() * pool.length);
+    if (pool.length > 1 && index === usagePromptLastIndex) {
+      index = (index + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length;
     }
     usagePromptLastIndex = index;
-    return USAGE_PROMPT_MESSAGES[index];
+    return pool[index];
   }
 
   function openUsagePrompt() {
@@ -2949,10 +2965,14 @@
   let userTrailLayer = null;
   let userToiletRouteLayer = null;
   let userEventRouteLayer = null;
+  let userSelectedRouteLayer = null;
   function applyMapSourceLayout() {
     updateMapRaster();
     mapDiv.style.width = currentMap.viewW + "px";
     mapDiv.style.height = currentMap.viewH + "px";
+    userSelectedRouteLayer?.setAttribute("viewBox", `0 0 ${currentMap.viewW} ${currentMap.viewH}`);
+    userSelectedRouteLayer?.setAttribute("width", currentMap.viewW);
+    userSelectedRouteLayer?.setAttribute("height", currentMap.viewH);
     userEventRouteLayer?.setAttribute("viewBox", `0 0 ${currentMap.viewW} ${currentMap.viewH}`);
     userEventRouteLayer?.setAttribute("width", currentMap.viewW);
     userEventRouteLayer?.setAttribute("height", currentMap.viewH);
@@ -2982,6 +3002,11 @@
   const indexHotspots = [];
   const indexHotspotsByEntry = new WeakMap();
   const SVG_NS = "http://www.w3.org/2000/svg";
+  userSelectedRouteLayer = document.createElementNS(SVG_NS, "svg");
+  userSelectedRouteLayer.classList.add("user-selected-route-layer");
+  userSelectedRouteLayer.setAttribute("aria-hidden", "true");
+  userSelectedRouteLayer.setAttribute("overflow", "visible");
+  mapDiv.appendChild(userSelectedRouteLayer);
   userEventRouteLayer = document.createElementNS(SVG_NS, "svg");
   userEventRouteLayer.classList.add("user-event-route-layer");
   userEventRouteLayer.setAttribute("aria-hidden", "true");
@@ -3265,6 +3290,7 @@
   let scheduleShowEvents = true;
   let scheduleShowOpen = true;
   let scheduleShowHours = false;
+  let scheduleShowNow = false;
   let scheduleStarredFilterEnabled = true;
   let scheduleTimelineNeedsMorningAnchor = true;
   let scheduleNowTimer = null;
@@ -3466,7 +3492,7 @@
     return [
       ...currentItems.map((item) => ({ item, timelineDateOffset: 0 })),
       ...carryItems,
-    ];
+    ].filter((record) => scheduleRecordMatchesNowFilter(record));
   }
 
   function mapEntryForCode(code) {
@@ -3647,7 +3673,22 @@
   }
 
   function scheduleAgendaItemsForActiveDate() {
-    return scheduleItemsForCurrentFilters(scheduleData.byDate?.[activeScheduleDate] || []);
+    const activeIndex = scheduleData.days.findIndex((day) => day.date === activeScheduleDate);
+    const currentRecords = scheduleItemsForCurrentFilters(scheduleData.byDate?.[activeScheduleDate] || [])
+      .map((item) => ({ item, timelineDateOffset: 0 }));
+    const carryRecords = [];
+    const nextDay = activeIndex >= 0 ? scheduleData.days[activeIndex + 1] : null;
+    if (nextDay) {
+      const nextDayItems = scheduleItemsForCurrentFilters(scheduleData.byDate?.[nextDay.date] || []);
+      for (const item of nextDayItems) {
+        const start = Number.isFinite(item.sortStart) ? item.sortStart : null;
+        if (start == null || start >= TIMELINE_OVERLAP_MIN) continue;
+        carryRecords.push({ item, timelineDateOffset: 1 });
+      }
+    }
+    return [...currentRecords, ...carryRecords]
+      .filter((record) => scheduleRecordMatchesNowFilter(record))
+      .map((record) => record.item);
   }
 
   function scheduleFilteredItemsForActiveDate() {
@@ -3865,10 +3906,8 @@
         <span>Starred</span>
       </label>
     `;
-    const topRowKeys = ["Burn", "Music", "Food & Drink"];
-    const bottomRowKeys = SCHEDULE_CATEGORY_FILTERS
-      .map((filter) => filter.key)
-      .filter((key) => !topRowKeys.includes(key));
+    const topRowKeys = ["Burn", "Music", "Performance", "Food & Drink"];
+    const bottomRowKeys = ["Service", "Community", "Workshop", "Wellness", "Movement"];
     const topRowHtml = topRowKeys.map((key) => filterHtml(byKey[key])).join("");
     const bottomRowHtml = bottomRowKeys.map((key) => filterHtml(byKey[key])).join("");
     scheduleCategoryFilters.innerHTML = `
@@ -3901,7 +3940,8 @@
     }
     scheduleFilterEvents.checked = scheduleShowEvents;
     scheduleFilterOpen.checked = scheduleShowOpen;
-    scheduleFilterHours.checked = scheduleShowHours;
+    if (scheduleFilterHours) scheduleFilterHours.checked = scheduleShowHours;
+    scheduleFilterNow.checked = scheduleShowNow;
     renderScheduleCategoryFilters();
   }
 
@@ -3909,6 +3949,16 @@
   function isWtfHoursItem(item) {
     const label = String(item?.sourceLabel || "").trim();
     return label === "WTF Guide 2026 — operating hours" || label === "WTF Guide 2026 — open hours";
+  }
+  function scheduleRecordMatchesNowFilter(record) {
+    if (!scheduleShowNow) return true;
+    const nowInfo = currentScheduleNowInfo();
+    if (!nowInfo) return false;
+    const range = displayRangeForItem(record);
+    return (
+      (nowInfo.minutes >= range.start && nowInfo.minutes <= range.end) ||
+      (range.start > nowInfo.minutes && range.start <= nowInfo.minutes + 15)
+    );
   }
   function scheduleItemsForCurrentFilters(items) {
     return items.filter((item) => {
@@ -3934,6 +3984,9 @@
     }
     if (!scheduleShowEvents && !scheduleShowOpen && !scheduleShowHours) {
       return "Enable Events, Open times, or Operating hours to see schedule entries for this burn day.";
+    }
+    if (scheduleShowNow) {
+      return "No schedule items are open now or opening within the next 15 minutes for this schedule view.";
     }
     if (scheduleStarredFilterEnabled) {
       return "No schedule items match the current tag filters and starred selection for this burn day.";
@@ -4516,8 +4569,13 @@
     renderSchedule();
     scrollScheduleSelectionIntoView();
   });
-  scheduleFilterHours.addEventListener("change", () => {
+  scheduleFilterHours?.addEventListener("change", () => {
     scheduleShowHours = scheduleFilterHours.checked;
+    renderSchedule();
+    scrollScheduleSelectionIntoView();
+  });
+  scheduleFilterNow.addEventListener("change", () => {
+    scheduleShowNow = scheduleFilterNow.checked;
     renderSchedule();
     scrollScheduleSelectionIntoView();
   });
@@ -5229,6 +5287,7 @@
     detailsMode = "fit";
     updateDetailsButtons();
     refreshHighlights();
+    updateSelectedRouteDisplay(currentUserLogicalPoint());
   }
   function openUserLocationDetails(mode = "half") {
     activeDetailHighlight = null;
@@ -5306,6 +5365,7 @@
     detailsPanel.setAttribute("aria-hidden", "false");
     if (mode === "half" || mode === "fit") fitMobileDetails();
     refreshHighlights();
+    updateSelectedRouteDisplay(currentUserLogicalPoint());
     syncStarControls();
     syncVisitedControls();
   }
@@ -5536,6 +5596,7 @@
     detailsPanel.setAttribute("aria-hidden", "false");
     if (mode === "half" || mode === "fit") fitMobileDetails();
     refreshHighlights();
+    updateSelectedRouteDisplay(currentUserLogicalPoint());
     syncStarControls();
     syncVisitedControls();
   }
@@ -6008,6 +6069,39 @@
     return selected.sort((a, b) => a.distance - b.distance);
   }
 
+  function selectedDetailRouteTarget() {
+    if (showingUserLocationDetails || !activeDetailHighlight) return null;
+    const entry = entryByHotspotEl.get(activeDetailHighlight);
+    if (entry) {
+      return {
+        x: Number(entry.x) + Number(entry.w || 0) / 2,
+        y: Number(entry.y) + Number(entry.h || 0) / 2,
+      };
+    }
+    const x = parseFloat(activeDetailHighlight.style.left) + parseFloat(activeDetailHighlight.style.width || "0") / 2;
+    const y = parseFloat(activeDetailHighlight.style.top) + parseFloat(activeDetailHighlight.style.height || "0") / 2;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x, y };
+  }
+
+  function updateSelectedRouteDisplay(currentPoint = null) {
+    userSelectedRouteLayer.replaceChildren();
+    if (!currentPoint) return null;
+    const target = selectedDetailRouteTarget();
+    if (!target) return null;
+    const line = document.createElementNS(SVG_NS, "line");
+    line.setAttribute("x1", mapX(currentPoint.x));
+    line.setAttribute("y1", mapY(currentPoint.y));
+    line.setAttribute("x2", mapX(target.x));
+    line.setAttribute("y2", mapY(target.y));
+    line.setAttribute("stroke", "rgba(216, 58, 58, 0.95)");
+    line.setAttribute("stroke-width", "3");
+    line.setAttribute("stroke-linecap", "round");
+    line.setAttribute("vector-effect", "non-scaling-stroke");
+    userSelectedRouteLayer.appendChild(line);
+    return target;
+  }
+
   function updateToiletRouteDisplay(currentPoint = null) {
     userToiletRouteLayer.replaceChildren();
     if (!showToiletRoutes || !currentPoint) return [];
@@ -6246,6 +6340,7 @@
     userPin.classList.remove("visible");
     userPin.classList.remove("has-heading");
     clearUserTrail();
+    userSelectedRouteLayer.replaceChildren();
     userEventRouteLayer.replaceChildren();
     userToiletRouteLayer.replaceChildren();
     syncGpsStatusAction();
@@ -6293,6 +6388,7 @@
     const trailAccuracy = debugActive ? 0 : latestGeoFix.accuracy;
     maybeAddUserTrailPoint(logicalPoint, trailTimestamp, trailSpeed, trailAccuracy);
     updateUserTrailDisplay(logicalPoint, trailTimestamp);
+    updateSelectedRouteDisplay(logicalPoint);
     updateEventRouteDisplay(logicalPoint);
     updateToiletRouteDisplay(logicalPoint);
     if (Number.isFinite(latestHeading)) {
