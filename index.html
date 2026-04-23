@@ -760,6 +760,37 @@
     margin-top:14px; padding-top:12px; border-top:1px solid #2c2c2c;
     color:#bbb; font-size:12px;
   }
+  .about-meta-actions {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .about-refresh-btn {
+    appearance:none;
+    background:#202020;
+    color:#eee;
+    border:1px solid #444;
+    border-radius:6px;
+    padding:7px 10px;
+    font-size:12px;
+    line-height:1.15;
+    cursor:pointer;
+  }
+  .about-refresh-btn:hover,
+  .about-refresh-btn:focus-visible {
+    background:#2a2a2a;
+    border-color:#666;
+    outline:none;
+  }
+  .about-refresh-btn:disabled {
+    opacity:0.6;
+    cursor:wait;
+  }
+  .about-refresh-note {
+    color:#888;
+    font-size:11px;
+  }
   .schedule-help-panel {
     width:min(680px, calc(100vw - 24px));
   }
@@ -1529,6 +1560,23 @@
     opacity:0.7;
     pointer-events:none;
   }
+  .schedule-timeline-card.uncertain-end::after {
+    content:"";
+    position:absolute;
+    top:-1px;
+    right:-1px;
+    bottom:-1px;
+    width:10px;
+    background:
+      linear-gradient(-45deg,
+        transparent 0 3px,
+        rgba(255,255,255,0.75) 3px 4px,
+        transparent 4px 7px);
+    background-size:10px 7px;
+    background-repeat:repeat-y;
+    opacity:0.7;
+    pointer-events:none;
+  }
   .schedule-timeline-card.event-kind {
     background:rgba(255,61,138,0.14);
     border-color:rgba(255,61,138,0.38);
@@ -1835,6 +1883,10 @@
       <div class="about-meta">
         <div id="about-version">App version: —</div>
         <div id="about-cache-version">Cache version: —</div>
+        <div class="about-meta-actions">
+          <button type="button" class="about-refresh-btn" id="about-refresh-btn">Refresh App Bundle</button>
+          <span class="about-refresh-note" id="about-refresh-note">Use this while online if a cache bump has not shown up yet. Offline use keeps the current saved bundle.</span>
+        </div>
       </div>
     </div>
   </section>
@@ -1991,8 +2043,9 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.23.4";
-  const APP_CACHE_VERSION = "v54";
+  const APP_VERSION = "2026.04.23.5";
+  const APP_CACHE_VERSION = "v55";
+  const AUTO_REFRESH_SESSION_KEY = "ab-auto-refresh-cache-target";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const EMPTY_SCHEDULE_DATA = { days: [], entries: [], byDate: {}, byLinkedCode: {}, series: [], seriesById: {}, seriesByLinkedCode: {} };
   const baseScheduleData = typeof SCHEDULE_DATA !== "undefined" ? SCHEDULE_DATA : EMPTY_SCHEDULE_DATA;
@@ -2037,6 +2090,8 @@
   const aboutClose = document.getElementById("about-close");
   const aboutVersion = document.getElementById("about-version");
   const aboutCacheVersion = document.getElementById("about-cache-version");
+  const aboutRefreshBtn = document.getElementById("about-refresh-btn");
+  const aboutRefreshNote = document.getElementById("about-refresh-note");
   const usageBackdrop = document.getElementById("usage-backdrop");
   const usageDismiss = document.getElementById("usage-dismiss");
   const usageCopy = document.getElementById("usage-copy");
@@ -2286,6 +2341,8 @@
       s: String(item.start || ""),
       e: String(item.end || ""),
       x: item.endNextDay ? 1 : 0,
+      es: item.estimatedStart ? 1 : 0,
+      ee: item.estimatedEnd ? 1 : 0,
       o: String(item.description || "").trim(),
       l: sanitizeLinkedCodes(item.linkedCodes),
       c: sanitizeScheduleCategories(item.categories),
@@ -2325,6 +2382,8 @@
       start: String(payload.s || ""),
       end: String(payload.e || ""),
       endNextDay: Boolean(payload.x),
+      estimatedStart: Boolean(payload.es),
+      estimatedEnd: Boolean(payload.ee),
       description: String(payload.o || "").trim(),
       linkedCodes: sanitizeLinkedCodes(payload.l),
       categories: sanitizeScheduleCategories(payload.c),
@@ -2368,6 +2427,8 @@
         endNextDay,
         start,
         end,
+        estimatedStart: Boolean(item.estimatedStart),
+        estimatedEnd: Boolean(item.estimatedEnd),
         categories,
         isCustom: true,
       };
@@ -2643,6 +2704,7 @@
 
   function openAbout(markSeen = true) {
     if (markSeen) localStorage.setItem(ABOUT_SEEN_STORAGE_KEY, "1");
+    updateAboutRefreshAvailability();
     aboutBackdrop.classList.add("open");
     aboutBackdrop.setAttribute("aria-hidden", "false");
   }
@@ -2650,6 +2712,77 @@
   function closeAbout() {
     aboutBackdrop.classList.remove("open");
     aboutBackdrop.setAttribute("aria-hidden", "true");
+  }
+
+  function updateAboutRefreshAvailability() {
+    if (!aboutRefreshBtn || !aboutRefreshNote) return;
+    const canRefresh = navigator.onLine && "serviceWorker" in navigator;
+    aboutRefreshBtn.disabled = !canRefresh;
+    aboutRefreshBtn.title = canRefresh
+      ? "Clear the old cached bundle and reload the latest version"
+      : "Refresh is only available while online";
+    aboutRefreshNote.textContent = canRefresh
+      ? "Online: this clears the old cached bundle and reloads the latest version."
+      : "Offline: the current saved bundle stays in place. Reconnect to fetch a newer version.";
+  }
+
+  async function refreshAppBundle(options = {}) {
+    if (!navigator.onLine) {
+      showPlainMessage("Need an internet connection to refresh the cached app bundle.");
+      return;
+    }
+    if (aboutRefreshBtn) aboutRefreshBtn.disabled = true;
+    try {
+      const targetCacheVersion = String(options.targetCacheVersion || "").trim();
+      if (targetCacheVersion) sessionStorage.setItem(AUTO_REFRESH_SESSION_KEY, targetCacheVersion);
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister().catch(() => false)));
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys
+          .filter((key) => /^ab-map-/.test(key))
+          .map((key) => caches.delete(key).catch(() => false)));
+      }
+      localStorage.removeItem("ab-map-cached");
+      showPlainMessage("Refreshing app bundle…");
+      window.setTimeout(() => {
+        location.reload();
+      }, 120);
+    } catch {
+      if (aboutRefreshBtn) aboutRefreshBtn.disabled = false;
+      showPlainMessage("Could not refresh the cached app bundle.");
+    }
+  }
+
+  async function fetchLiveCacheVersion() {
+    if (!navigator.onLine) return null;
+    const response = await fetch(`sw.js?cache-check=${Date.now()}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    if (!response.ok) return null;
+    const text = await response.text();
+    const match = text.match(/const\s+CACHE_VERSION\s*=\s*"([^"]+)"/);
+    return match?.[1] || null;
+  }
+
+  async function maybeAutoRefreshAppBundle() {
+    if (!navigator.onLine || document.visibilityState !== "visible") return;
+    try {
+      const liveCacheVersion = await fetchLiveCacheVersion();
+      if (!liveCacheVersion || liveCacheVersion === APP_CACHE_VERSION) {
+        sessionStorage.removeItem(AUTO_REFRESH_SESSION_KEY);
+        return;
+      }
+      const priorTarget = sessionStorage.getItem(AUTO_REFRESH_SESSION_KEY);
+      if (priorTarget === liveCacheVersion) return;
+      showPlainMessage(`Updating app bundle to ${liveCacheVersion}…`, 2200);
+      await refreshAppBundle({ targetCacheVersion: liveCacheVersion });
+    } catch {
+      // Ignore version-check failures; offline bundle should continue working.
+    }
   }
 
   function openScheduleHelp() {
@@ -2914,6 +3047,13 @@
 
   aboutBtn.addEventListener("click", openAbout);
   aboutClose.addEventListener("click", closeAbout);
+  aboutRefreshBtn?.addEventListener("click", refreshAppBundle);
+  window.addEventListener("online", () => {
+    updateAboutRefreshAvailability();
+    maybeAutoRefreshAppBundle();
+  });
+  window.addEventListener("online", updateAboutRefreshAvailability);
+  window.addEventListener("offline", updateAboutRefreshAvailability);
   aboutBackdrop.addEventListener("click", (ev) => {
     if (ev.target === aboutBackdrop) closeAbout();
   });
@@ -3968,6 +4108,7 @@
     const description = String(item.description || "").toLowerCase();
     const combined = `${label} ${description}`;
     const uncertainStart = (
+      Boolean(item.estimatedStart) ||
       explicitStart == null ||
       /\bish\b/.test(combined) ||
       /\bafter dark\b|\bafter sunset\b|\bsunset\b|\bsunrise\b|\bevening\b|\bafternoon\b|\bmorning\b/.test(combined)
@@ -3990,43 +4131,44 @@
       end: clampedEnd,
       openEnded: estimated.openEnded,
       uncertainStart: startMeta.uncertainStart,
+      uncertainEnd: estimated.uncertainEnd,
       nextDay: Boolean(estimated.nextDay || item.timelineDateOffset),
     };
   }
 
   function estimateScheduleEnd(item, start) {
     if (Number.isFinite(item.sortEnd) && item.sortEnd > start) {
-      return { end: item.sortEnd, openEnded: false, nextDay: item.sortEnd >= 24 * 60 };
+      return { end: item.sortEnd, openEnded: false, uncertainEnd: Boolean(item.estimatedEnd), nextDay: item.sortEnd >= 24 * 60 };
     }
     if (Number.isFinite(item.estimatedEnd)) {
       const estimated = item.estimatedEnd + (item.estimatedEndNextDay ? 24 * 60 : 0);
-      return { end: estimated, openEnded: true, nextDay: estimated >= 24 * 60 };
+      return { end: estimated, openEnded: true, uncertainEnd: true, nextDay: estimated >= 24 * 60 };
     }
     const label = String(item.timeLabel || "").toLowerCase();
     const description = String(item.description || "").toLowerCase();
     const combined = `${label} ${description}`;
     if (/\b(until|till)\s+late\b|\blate\b/.test(label)) {
-      return { end: TIMELINE_END_MIN, openEnded: true, nextDay: true };
+      return { end: TIMELINE_END_MIN, openEnded: true, uncertainEnd: true, nextDay: true };
     }
     if (/from\s+\d|from\s+[a-z]/.test(label)) {
-      return { end: Math.min(TIMELINE_END_MIN, start + (item.kind === "open" ? 5 * 60 : 4 * 60)), openEnded: true, nextDay: start + (item.kind === "open" ? 5 * 60 : 4 * 60) > 24 * 60 };
+      return { end: Math.min(TIMELINE_END_MIN, start + (item.kind === "open" ? 5 * 60 : 4 * 60)), openEnded: true, uncertainEnd: true, nextDay: start + (item.kind === "open" ? 5 * 60 : 4 * 60) > 24 * 60 };
     }
     if (/after dark|after sunset|friday evening|thursday evening|evening/.test(combined)) {
-      return { end: Math.min(TIMELINE_END_MIN, start + 6 * 60), openEnded: true, nextDay: start + 6 * 60 > 24 * 60 };
+      return { end: Math.min(TIMELINE_END_MIN, start + 6 * 60), openEnded: true, uncertainEnd: true, nextDay: start + 6 * 60 > 24 * 60 };
     }
     if (/sunset/.test(combined)) {
-      return { end: Math.min(TIMELINE_END_MIN, start + 5 * 60), openEnded: true, nextDay: start + 5 * 60 > 24 * 60 };
+      return { end: Math.min(TIMELINE_END_MIN, start + 5 * 60), openEnded: true, uncertainEnd: true, nextDay: start + 5 * 60 > 24 * 60 };
     }
     if (/afternoon/.test(combined)) {
-      return { end: Math.min(TIMELINE_END_MIN, start + 4 * 60), openEnded: true, nextDay: start + 4 * 60 > 24 * 60 };
+      return { end: Math.min(TIMELINE_END_MIN, start + 4 * 60), openEnded: true, uncertainEnd: true, nextDay: start + 4 * 60 > 24 * 60 };
     }
     if (/morning/.test(combined)) {
-      return { end: Math.min(TIMELINE_END_MIN, start + 3 * 60), openEnded: true, nextDay: start + 3 * 60 > 24 * 60 };
+      return { end: Math.min(TIMELINE_END_MIN, start + 3 * 60), openEnded: true, uncertainEnd: true, nextDay: start + 3 * 60 > 24 * 60 };
     }
     if (/sunrise/.test(combined)) {
-      return { end: Math.min(TIMELINE_END_MIN, start + 2 * 60), openEnded: true, nextDay: start + 2 * 60 > 24 * 60 };
+      return { end: Math.min(TIMELINE_END_MIN, start + 2 * 60), openEnded: true, uncertainEnd: true, nextDay: start + 2 * 60 > 24 * 60 };
     }
-    return { end: Math.min(TIMELINE_END_MIN, start + (item.kind === "open" ? 4 * 60 : 3 * 60)), openEnded: true, nextDay: start + (item.kind === "open" ? 4 * 60 : 3 * 60) > 24 * 60 };
+    return { end: Math.min(TIMELINE_END_MIN, start + (item.kind === "open" ? 4 * 60 : 3 * 60)), openEnded: true, uncertainEnd: true, nextDay: start + (item.kind === "open" ? 4 * 60 : 3 * 60) > 24 * 60 };
   }
 
   function hourLabel(minutes) {
@@ -4458,7 +4600,12 @@
 
   function computeTimelineLayout(records) {
     const layoutItems = records.map((record) => ({ ...record, ...displayRangeForItem(record) }))
-      .sort((a, b) => a.start - b.start || a.end - b.end || a.item.title.localeCompare(b.item.title));
+      .sort((a, b) =>
+        Number(Boolean(b.item.isCustom)) - Number(Boolean(a.item.isCustom))
+        || a.start - b.start
+        || a.end - b.end
+        || a.item.title.localeCompare(b.item.title)
+      );
     const laneEnds = [];
     let maxLane = 0;
     for (const record of layoutItems) {
@@ -4542,13 +4689,14 @@
               const selected = record.item.id === activeScheduleEventId ? " selected" : "";
               const openEnded = record.openEnded ? " open-ended" : "";
               const uncertainStart = record.uncertainStart ? " uncertain-start" : "";
+              const uncertainEnd = record.uncertainEnd ? " uncertain-end" : "";
               const burnCategory = scheduleItemHasBurnCategory(record.item) ? " burn-category" : "";
               const starred = isScheduleItemStarred(record.item.id) ? " starred" : "";
               const startedNow = scheduleItemStartedNow(record.item) ? " started-now" : "";
               const personal = record.item.isCustom ? " personal" : "";
               const wtfHours = record.isWtfHours ? " wtf-hours" : "";
               return `
-                <button type="button" class="schedule-timeline-card ${escapeHtml(record.item.kind)}-kind${burnCategory}${selected}${openEnded}${uncertainStart}${starred}${startedNow}${personal}${wtfHours}" data-schedule-toggle="${escapeHtml(record.item.id)}" data-schedule-id="${escapeHtml(record.item.id)}" data-source="${escapeHtml(record.item.sourceLabel || '')}" style="top:${top}px; left:${left}px; width:${width}px; height:${height}px;">
+                <button type="button" class="schedule-timeline-card ${escapeHtml(record.item.kind)}-kind${burnCategory}${selected}${openEnded}${uncertainStart}${uncertainEnd}${starred}${startedNow}${personal}${wtfHours}" data-schedule-toggle="${escapeHtml(record.item.id)}" data-schedule-id="${escapeHtml(record.item.id)}" data-source="${escapeHtml(record.item.sourceLabel || '')}" style="top:${top}px; left:${left}px; width:${width}px; height:${height}px;">
                   <div class="schedule-timeline-title">${escapeHtml(record.item.title)}</div>
                 </button>
               `;
@@ -4570,6 +4718,8 @@
       start: startValue,
       end: endValue,
       endNextDay,
+      estimatedStart: Boolean(item?.estimatedStart),
+      estimatedEnd: Boolean(item?.estimatedEnd),
       linkedCodes: (item?.linkedCodes || []).join(", "),
       categories: sanitizeScheduleCategories(item?.categories || []),
       description: item?.description || "",
@@ -4667,10 +4817,18 @@
               <div class="schedule-editor-field">
                 <label for="schedule-editor-start">Start</label>
                 <input id="schedule-editor-start" name="start" type="time" value="${escapeHtml(values.start)}" required>
+                <label class="schedule-editor-check" for="schedule-editor-estimated-start">
+                  <input id="schedule-editor-estimated-start" name="estimatedStart" type="checkbox"${values.estimatedStart ? " checked" : ""}>
+                  <span>Estimated</span>
+                </label>
               </div>
               <div class="schedule-editor-field">
                 <label for="schedule-editor-end">End</label>
                 <input id="schedule-editor-end" name="end" type="time" value="${escapeHtml(values.end)}">
+                <label class="schedule-editor-check" for="schedule-editor-estimated-end">
+                  <input id="schedule-editor-estimated-end" name="estimatedEnd" type="checkbox"${values.estimatedEnd ? " checked" : ""}>
+                  <span>Estimated</span>
+                </label>
               </div>
               <div class="schedule-editor-field">
                 <label class="schedule-editor-check" for="schedule-editor-end-next-day">
@@ -4780,6 +4938,8 @@
       const start = String(fd.get("start") || "");
       const end = String(fd.get("end") || "");
       const endNextDay = fd.get("endNextDay") === "on";
+      const estimatedStart = fd.get("estimatedStart") === "on";
+      const estimatedEnd = fd.get("estimatedEnd") === "on";
       const description = String(fd.get("description") || "").trim();
       const linkedCodes = sanitizeLinkedCodes(fd.get("linkedCodes") || "");
       const categories = sanitizeScheduleCategories(fd.getAll("categories"));
@@ -4792,7 +4952,7 @@
         start,
       }, id);
       customScheduleItems = customScheduleItems.filter((item) => item.id !== id);
-      customScheduleItems.push({ id, shareId, title, date, start, end, endNextDay, description, linkedCodes, categories });
+      customScheduleItems.push({ id, shareId, title, date, start, end, endNextDay, estimatedStart, estimatedEnd, description, linkedCodes, categories });
       persistCustomScheduleItems();
       refreshScheduleData();
       scheduleEditorState = null;
@@ -4828,6 +4988,8 @@
             <span>${escapeHtml(item.timeLabel)}</span>
             ${scheduleItemStartedNow(item) ? '<span class="schedule-live-chip">Started</span>' : ""}
             ${item.isCustom ? '<span>Personal</span>' : ""}
+            ${item.estimatedStart ? '<span>Start est</span>' : ""}
+            ${item.estimatedEnd ? '<span>End est</span>' : ""}
             ${item.linkedCodes.map((code) => `<span>${escapeHtml(code)}</span>`).join("")}
             ${scheduleCategoryHtml(item)}
             ${item.sourceLabel ? `<span class="schedule-source-label" data-source="${escapeHtml(item.sourceLabel)}">${escapeHtml(item.sourceLabel)}</span>` : ""}
@@ -4875,12 +5037,17 @@
     if (!item) return "";
     const dateLabel = scheduleData.days.find((day) => day.date === item.date)?.longLabel || item.date || "Unknown day";
     const timeLabel = friendlyTimeLabel(item.start, item.end, item.endNextDay) || item.timeLabel || "Custom time";
+    const estimateBits = [
+      item.estimatedStart ? "start estimated" : "",
+      item.estimatedEnd ? "end estimated" : "",
+    ].filter(Boolean).join(" · ");
     const linkedText = (item.linkedCodes || []).filter(Boolean).join(", ");
     const categoryText = (item.categories || []).filter(Boolean).join(", ");
     return `
       <div class="share-preview-block">
         <div class="share-preview-title">${escapeHtml(item.title)}</div>
         <div class="share-preview-notes">${escapeHtml(`${dateLabel} · ${timeLabel}`)}</div>
+        ${estimateBits ? `<div class="share-preview-notes">${escapeHtml(estimateBits)}</div>` : ""}
         ${linkedText ? `<div class="share-preview-notes"><strong>Linked:</strong> ${escapeHtml(linkedText)}</div>` : ""}
         ${categoryText ? `<div class="share-preview-notes"><strong>Tags:</strong> ${escapeHtml(categoryText)}</div>` : ""}
         ${item.description ? `<div class="share-preview-notes">${escapeHtml(item.description)}</div>` : ""}
@@ -4935,6 +5102,8 @@
       start: incoming.start || (useExistingFallback ? existing.start : ""),
       end: incoming.end || (useExistingFallback ? existing.end : ""),
       endNextDay: incoming.end ? Boolean(incoming.endNextDay) : (useExistingFallback ? Boolean(existing?.endNextDay) : Boolean(incoming.endNextDay)),
+      estimatedStart: incoming.estimatedStart || (useExistingFallback ? Boolean(existing?.estimatedStart) : false),
+      estimatedEnd: incoming.estimatedEnd || (useExistingFallback ? Boolean(existing?.estimatedEnd) : false),
       description: incoming.description || (useExistingFallback ? String(existing?.description || "") : ""),
       linkedCodes: incoming.linkedCodes?.length ? [...incoming.linkedCodes] : (useExistingFallback ? sanitizeLinkedCodes(existing?.linkedCodes) : []),
       categories: incoming.categories?.length ? [...incoming.categories] : (useExistingFallback ? sanitizeScheduleCategories(existing?.categories) : []),
@@ -4952,6 +5121,8 @@
       start: incoming.start,
       end: incoming.end,
       endNextDay: Boolean(incoming.endNextDay),
+      estimatedStart: Boolean(incoming.estimatedStart),
+      estimatedEnd: Boolean(incoming.estimatedEnd),
       description: incoming.description,
       linkedCodes: [...incoming.linkedCodes],
       categories: [...incoming.categories],
@@ -4990,10 +5161,15 @@
       const payload = serializeSharedEventPayload(item);
       const dateLabel = scheduleData.days.find((day) => day.date === item.date)?.longLabel || item.date || "Unknown day";
       const timeLabel = item.timeLabel || friendlyTimeLabel(item.start, item.end, item.endNextDay) || "Custom time";
+      const estimateBits = [
+        item.estimatedStart ? "start estimated" : "",
+        item.estimatedEnd ? "end estimated" : "",
+      ].filter(Boolean).join(" · ");
       shareBody.innerHTML = `
         <div class="share-card">
           <h3>${escapeHtml(item.title)}</h3>
           <p class="share-copy">${escapeHtml(dateLabel)} · ${escapeHtml(timeLabel)}</p>
+          ${estimateBits ? `<p class="share-copy">${escapeHtml(estimateBits)}</p>` : ""}
           <p class="share-copy">Show this QR on one phone and scan it from the map app on another phone.</p>
           <div class="share-qr-wrap">
             <canvas class="share-qr-canvas" id="share-qr-canvas"></canvas>
@@ -7599,6 +7775,9 @@
     if (!localStorage.getItem(ABOUT_SEEN_STORAGE_KEY)) {
       openAbout(true);
     }
+    window.setTimeout(() => {
+      maybeAutoRefreshAppBundle();
+    }, 900);
   }
   if (img.complete) init(); else img.addEventListener("load", init, { once: true });
   window.addEventListener("popstate", (ev) => {
