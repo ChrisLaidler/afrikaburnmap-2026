@@ -1013,6 +1013,17 @@
   }
   .schedule-category-filter.starred-filter span { color:#ffd65b; }
   .schedule-category-filter.custom-filter span { color:#7de38f; }
+  .schedule-category-filter.live-filter span { color:#7dd8f8; }
+  .schedule-filter-all-none {
+    appearance:none; background:none;
+    border:1px solid #2e2e2e; border-radius:3px;
+    color:#444; font-size:8.5px; font-weight:700; letter-spacing:0.04em;
+    padding:2px 4px; cursor:pointer; flex-shrink:0; line-height:1.1;
+    width:28px; text-align:center;
+  }
+  .schedule-filter-all-none:hover, .schedule-filter-all-none:focus-visible {
+    color:#777; border-color:#555; outline:none;
+  }
   .schedule-category-filter.burn span { color:#ffc15a; }
   .schedule-category-filter.music span,
   .schedule-category-filter.performance span { color:#f6a3d8; }
@@ -2208,6 +2219,7 @@
   const STARRED_ENTRY_STORAGE_KEY = "ab-map-starred-entries";
   const ENTRY_NOTE_STORAGE_KEY = "ab-map-entry-notes";
   const LIVE_ADMIN_PIN_SESSION_KEY = "ab-live-admin-pin";
+  const LIVE_SERVER_URL_SESSION_KEY = "ab-live-server-url";
   const LIVE_UPDATES_POLL_INTERVAL = 2 * 60 * 1000;
   const SCHEDULE_CATEGORY_OPTIONS = [
     { key: "Burn", label: "Burn", shortLabel: "Burn" },
@@ -2223,6 +2235,7 @@
   let scheduleData = baseScheduleData;
   let liveScheduleUpdates = [];
   let isLiveAdmin = Boolean(sessionStorage.getItem(LIVE_ADMIN_PIN_SESSION_KEY));
+  let liveServerBase = sessionStorage.getItem(LIVE_SERVER_URL_SESSION_KEY) || "";
   const oldWtfDetails = typeof OLD_WTF_DETAILS !== "undefined" ? OLD_WTF_DETAILS : { byCode: {} };
   const viewport = document.getElementById("viewport");
   const mapDiv = document.getElementById("map");
@@ -2712,7 +2725,7 @@
           linkedCodes: [...(item.linkedCodes || [])],
           categories: [...(item.categories || [])],
         }, scheduleBaseOverrides[item.id])),
-      ...normalizeCustomScheduleItems(customRaw).filter((item) => !liveDeleteIds.has(String(item.id))),
+      ...normalizeCustomScheduleItems(customRaw).filter((item) => !liveDeleteIds.has(String(item.id)) && !liveUpsertIds.has(String(item.id))),
       ...normalizeCustomScheduleItems(liveUpserts, { isLive: true }).filter((item) => !liveDeleteIds.has(String(item.id))),
     ];
 
@@ -2965,7 +2978,7 @@
 
   async function fetchLiveUpdates(silent = false) {
     try {
-      const resp = await fetch("./schedule-updates.json");
+      const resp = await fetch(`${liveServerBase}/schedule-updates.json`);
       if (!resp.ok) return;
       const data = await resp.json();
       if (!Array.isArray(data)) return;
@@ -2988,10 +3001,10 @@
       if (!pin) return false;
     }
     try {
-      const resp = await fetch("./api/updates", {
+      const resp = await fetch(`${liveServerBase}/api/updates`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${pin}` },
-        body: JSON.stringify(update),
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ ...update, auth: pin }),
       });
       if (resp.status === 401) {
         sessionStorage.removeItem(LIVE_ADMIN_PIN_SESSION_KEY);
@@ -3005,6 +3018,21 @@
       sessionStorage.setItem(LIVE_ADMIN_PIN_SESSION_KEY, pin);
       isLiveAdmin = true;
       updateLiveAuthUi();
+      // Remove local copy — live version is now canonical
+      const publishedId = update.id;
+      const wasCustom = customScheduleItems.some((e) => e.id === publishedId);
+      const wasOverride = publishedId && scheduleBaseOverrides[publishedId];
+      if (wasCustom) {
+        customScheduleItems = customScheduleItems.filter((e) => e.id !== publishedId);
+        persistCustomScheduleItems();
+      }
+      if (wasOverride) {
+        delete scheduleBaseOverrides[publishedId];
+        persistScheduleBaseOverrides();
+      }
+      // Rebuild scheduleData immediately after local deletion so the stale
+      // custom item is gone even if fetchLiveUpdates sees no change in the feed.
+      if (wasCustom || wasOverride) refreshScheduleData();
       await fetchLiveUpdates(true);
       showPlainMessage("Published to live feed!");
       return true;
@@ -3021,9 +3049,10 @@
       if (!pin) return false;
     }
     try {
-      const resp = await fetch(`./api/updates/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${pin}` },
+      const resp = await fetch(`${liveServerBase}/api/updates`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "remove", id, auth: pin }),
       });
       if (resp.status === 401) {
         sessionStorage.removeItem(LIVE_ADMIN_PIN_SESSION_KEY);
@@ -3057,14 +3086,14 @@
     btn.classList.toggle("active", isLiveAdmin);
     if (note) {
       note.textContent = isLiveAdmin
-        ? "Live admin active — publish controls are visible. Tap SU again to sign out."
+        ? `Live admin active (${liveServerBase || "same origin"}) — tap SU to sign out.`
         : "";
     }
   }
 
-  appVersion.textContent = `app ${APP_VERSION}`;
+  appVersion.textContent = `app ${APP_VERSION} · cache …`;
   aboutVersion.textContent = `App version: ${APP_VERSION}`;
-  aboutCacheVersion.textContent = `Cache version: —`;
+  aboutCacheVersion.textContent = `Cache version: …`;
   (async () => {
     let v = await getInstalledCacheVersion();
     if (!v && "serviceWorker" in navigator) {
@@ -3072,10 +3101,8 @@
       await navigator.serviceWorker.ready.catch(() => null);
       v = await getInstalledCacheVersion();
     }
-    if (v) {
-      appVersion.textContent = `app ${APP_VERSION} · cache ${v}`;
-      aboutCacheVersion.textContent = `Cache version: ${v}`;
-    }
+    appVersion.textContent = `app ${APP_VERSION} · cache ${v || "—"}`;
+    aboutCacheVersion.textContent = `Cache version: ${v || "—"}`;
   })();
   let plainMessageTimer = null;
 
@@ -3435,21 +3462,50 @@
   }
 
   const liveAuthBtn = document.getElementById("live-auth-btn");
-  liveAuthBtn?.addEventListener("click", () => {
+  liveAuthBtn?.addEventListener("click", async () => {
     if (isLiveAdmin) {
       sessionStorage.removeItem(LIVE_ADMIN_PIN_SESSION_KEY);
+      sessionStorage.removeItem(LIVE_SERVER_URL_SESSION_KEY);
       isLiveAdmin = false;
+      liveServerBase = "";
       updateLiveAuthUi();
       showPlainMessage("Signed out of live admin.");
       renderSchedule();
     } else {
-      const pin = window.prompt("Enter live admin password:") || "";
+      const defaultUrl = liveServerBase || `${location.protocol}//${location.hostname}:8080`;
+      const serverUrl = window.prompt("Live server URL:", defaultUrl) || "";
+      if (!serverUrl) return;
+      const pin = window.prompt("Admin password:") || "";
       if (!pin) return;
+      closeAbout();
+      const base = serverUrl.replace(/\/$/, "");
+      try {
+        const resp = await fetch(`${base}/api/updates`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "ping", id: "_ping", auth: pin }),
+        });
+        if (resp.status === 401) {
+          showPlainMessage("Wrong password — not signed in.");
+          return;
+        }
+        if (!resp.ok) {
+          showPlainMessage("Server error — check server URL.");
+          return;
+        }
+      } catch {
+        showPlainMessage("Could not reach server — check URL and network.");
+        return;
+      }
+      liveServerBase = base;
+      sessionStorage.setItem(LIVE_SERVER_URL_SESSION_KEY, liveServerBase);
       sessionStorage.setItem(LIVE_ADMIN_PIN_SESSION_KEY, pin);
       isLiveAdmin = true;
       updateLiveAuthUi();
+      fetchLiveUpdates(true);
       showPlainMessage("Signed in as live admin.");
       renderSchedule();
+      return;
     }
     closeAbout();
   });
@@ -4251,6 +4307,7 @@
   let scheduleShowNow = false;
   let scheduleStarredFilterEnabled = true;
   let scheduleCustomFilterEnabled = true;
+  let scheduleLiveFilterEnabled = true;
   let scheduleTimelineNeedsMorningAnchor = true;
   let scheduleNowTimer = null;
   let scheduleTimelineZoom = 1;
@@ -4837,7 +4894,7 @@
     const enabled = SCHEDULE_CATEGORY_FILTERS.filter((filter) => scheduleCategoryState[filter.key]).map((filter) => filter.key);
     const starredMatch = scheduleStarredFilterEnabled && isScheduleItemStarred(item.id);
     const customMatch = scheduleCustomFilterEnabled && Boolean(item.isCustom);
-    const liveMatch = Boolean(item.isLive); // live feed events always visible
+    const liveMatch = scheduleLiveFilterEnabled && Boolean(item.isLive);
     const allCategoriesEnabled = enabled.length === SCHEDULE_CATEGORY_FILTERS.length;
     const categoryMatch =
       allCategoriesEnabled
@@ -4876,21 +4933,32 @@
         <span>Custom</span>
       </label>
     `;
+    const liveHtml = liveScheduleUpdates.some((u) => u.action === "upsert") ? `
+      <label class="schedule-category-filter live-filter" title="Show live feed events">
+        <input type="checkbox" data-schedule-live-only${scheduleLiveFilterEnabled ? " checked" : ""}>
+        <span>Live</span>
+      </label>
+    ` : "";
     const topRowKeys = ["Burn", "Music", "Performance", "Food & Drink"];
     const bottomRowKeys = ["Service", "Community", "Workshop", "Wellness", "Movement"];
+    const topRowAllChecked = topRowKeys.every((k) => scheduleCategoryState[k]);
+    const bottomRowAllChecked = bottomRowKeys.every((k) => scheduleCategoryState[k]);
+    const allNoneBtn = (row, allChecked) =>
+      `<button type="button" class="schedule-filter-all-none" data-filter-row="${row}" title="${allChecked ? "Deselect all" : "Select all"}">${allChecked ? "None" : "All"}</button>`;
     const topRowHtml = topRowKeys.map((key) => filterHtml(byKey[key])).join("");
     const bottomRowHtml = bottomRowKeys.map((key) => filterHtml(byKey[key])).join("");
     scheduleCategoryFilters.innerHTML = `
       <div class="schedule-category-filter-row">
-        ${starredHtml}${customHtml}${topRowHtml}
+        ${allNoneBtn(0, topRowAllChecked)}${topRowHtml}
       </div>
       <div class="schedule-category-filter-row">
-        ${bottomRowHtml}
+        ${allNoneBtn(1, bottomRowAllChecked)}${bottomRowHtml}${starredHtml}${customHtml}${liveHtml}
       </div>
     `;
     for (const input of scheduleCategoryFilters.querySelectorAll("[data-schedule-category]")) {
       input.addEventListener("change", () => {
         scheduleCategoryState[input.dataset.scheduleCategory] = input.checked;
+        renderScheduleCategoryFilters();
         renderSchedule();
         scrollScheduleSelectionIntoView();
       });
@@ -4905,6 +4973,21 @@
       renderSchedule();
       scrollScheduleSelectionIntoView();
     });
+    scheduleCategoryFilters.querySelector("[data-schedule-live-only]")?.addEventListener("change", (ev) => {
+      scheduleLiveFilterEnabled = ev.currentTarget.checked;
+      renderSchedule();
+      scrollScheduleSelectionIntoView();
+    });
+    for (const btn of scheduleCategoryFilters.querySelectorAll("[data-filter-row]")) {
+      btn.addEventListener("click", () => {
+        const rowKeys = btn.dataset.filterRow === "0" ? topRowKeys : bottomRowKeys;
+        const allOn = rowKeys.every((k) => scheduleCategoryState[k]);
+        for (const k of rowKeys) scheduleCategoryState[k] = !allOn;
+        renderScheduleCategoryFilters();
+        renderSchedule();
+        scrollScheduleSelectionIntoView();
+      });
+    }
   }
 
   function renderScheduleViewToggle() {
@@ -5547,17 +5630,17 @@
       const payload = buildPublishPayload();
       if (!payload) return;
       await publishLiveUpdate(payload);
-      renderScheduleDetail(item);
+      renderScheduleDetail(scheduleOccurrenceById(item.id) || null);
     });
     scheduleDetail.querySelector("[data-schedule-publish-update]")?.addEventListener("click", async () => {
       const payload = buildPublishPayload();
       if (!payload) return;
       await publishLiveUpdate(payload);
-      renderScheduleDetail(item);
+      renderScheduleDetail(scheduleOccurrenceById(item.id) || null);
     });
     scheduleDetail.querySelector("[data-schedule-remove-live]")?.addEventListener("click", async () => {
       await removeLiveUpdate(item.id);
-      renderScheduleDetail(item);
+      renderScheduleDetail(scheduleOccurrenceById(item.id) || null);
     });
   }
 

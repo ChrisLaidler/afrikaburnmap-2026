@@ -8,18 +8,21 @@ power users can push live schedule additions/edits/deletions to connected client
 Usage:
     python3 pi_server.py [--port 8080] [--password secret]
 
-API (requires Authorization: Bearer <password>):
-    POST   /api/updates       — upsert an event (body: JSON object with "id" field)
-    DELETE /api/updates/<id>  — remove an event from the live feed by id
+API — all via POST /api/updates, password in JSON body (no auth header needed):
+    { "auth": "<password>", "action": "upsert", "id": "...", ...eventFields }
+        — add or replace an event in the live feed
+    { "auth": "<password>", "action": "delete", "id": "..." }
+        — add a tombstone that suppresses that ID on all clients
+    { "auth": "<password>", "action": "remove", "id": "..." }
+        — remove an entry from the live feed entirely (undo upsert or delete)
 
 Public:
-    GET    /schedule-updates.json  — served by the static file handler
+    GET /schedule-updates.json  — served by the static file handler
 """
 
 import argparse
 import json
 import threading
-import urllib.parse
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -42,83 +45,58 @@ def _write_updates(updates):
 
 
 class Handler(SimpleHTTPRequestHandler):
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self._cors_headers()
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
-        self.end_headers()
-
     def do_POST(self):
         if self.path != "/api/updates":
             self.send_error(404)
             return
-        if not self._check_auth():
-            return
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length)
         try:
-            update = json.loads(body)
-        except json.JSONDecodeError:
+            data = json.loads(body)
+        except (json.JSONDecodeError, ValueError):
             self.send_error(400, "Invalid JSON")
             return
-        if not isinstance(update, dict) or not update.get("id"):
+        if not isinstance(data, dict):
+            self.send_error(400, "Expected JSON object")
+            return
+        if data.get("auth") != _password:
+            self._json_response(401, b'{"error":"Unauthorized"}')
+            return
+        event_id = str(data.get("id", "")).strip()
+        if not event_id:
             self.send_error(400, "Missing or empty id field")
             return
-        event_id = str(update["id"])
+        action = str(data.get("action", "upsert"))
+        if action == "ping":
+            self._json_response(200, b'{"ok":true}')
+            return
+        # Strip the auth field before storing
+        entry = {k: v for k, v in data.items() if k != "auth"}
         with _lock:
             updates = _read_updates()
+            # Always remove existing entry with same id first
             updates = [u for u in updates if str(u.get("id", "")) != event_id]
-            updates.append(update)
+            if action == "remove":
+                # "remove" just deletes from the file — don't append anything
+                pass
+            else:
+                updates.append(entry)
             _write_updates(updates)
-        self._json_ok()
-        print(f"[upsert] id={event_id} action={update.get('action', 'upsert')}")
-
-    def do_DELETE(self):
-        prefix = "/api/updates/"
-        if not self.path.startswith(prefix):
-            self.send_error(404)
-            return
-        if not self._check_auth():
-            return
-        event_id = urllib.parse.unquote(self.path[len(prefix):])
-        if not event_id:
-            self.send_error(400, "Missing id in path")
-            return
-        with _lock:
-            updates = _read_updates()
-            updates = [u for u in updates if str(u.get("id", "")) != event_id]
-            _write_updates(updates)
-        self._json_ok()
-        print(f"[delete] id={event_id}")
+        self._json_response(200, b'{"ok":true}')
+        print(f"[{action}] id={event_id}")
 
     def end_headers(self):
-        self._cors_headers()
+        self.send_header("Access-Control-Allow-Origin", "*")
         super().end_headers()
 
-    def _cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-
-    def _check_auth(self):
-        auth = self.headers.get("Authorization", "")
-        if auth != f"Bearer {_password}":
-            self.send_response(401)
-            self._cors_headers()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(b'{"error":"Unauthorized"}')
-            return False
-        return True
-
-    def _json_ok(self):
-        self.send_response(200)
+    def _json_response(self, code, body):
+        self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        self.wfile.write(b'{"ok":true}')
+        self.wfile.write(body)
 
     def log_message(self, fmt, *args):
-        # Suppress static-file GET noise; keep POST/DELETE logs above
-        if self.command in ("POST", "DELETE", "OPTIONS"):
+        if self.command == "POST":
             super().log_message(fmt, *args)
 
 
