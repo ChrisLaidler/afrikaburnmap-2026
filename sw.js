@@ -1,6 +1,6 @@
 // Service worker: pre-cache the small set of static assets so the site works offline.
 // Bump CACHE_VERSION when any of the cached files change so clients fetch a fresh copy.
-const CACHE_VERSION = "v57";
+const CACHE_VERSION = "v58";
 const CACHE_NAME = "ab-map-" + CACHE_VERSION;
 const ASSETS = [
   "./",
@@ -37,11 +37,26 @@ self.addEventListener("activate", (event) => {
 });
 
 // Cache-first for same-origin GETs. Network for everything else (analytics, etc.).
+// schedule-updates.json uses network-first so live Pi updates reach clients immediately.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // let analytics fall through to network
+
+  // Network-first for the live update feed: try network, fall back to cached copy.
+  if (url.pathname.endsWith("/schedule-updates.json")) {
+    event.respondWith(
+      fetch(req).then((resp) => {
+        if (resp && resp.ok) {
+          const copy = resp.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+        }
+        return resp;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(req).then((cached) => {

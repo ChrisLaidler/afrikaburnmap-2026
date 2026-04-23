@@ -1096,6 +1096,19 @@
     line-height:1.1;
     white-space:nowrap;
   }
+  .schedule-live-chip.live-feed {
+    border-color:rgba(80,200,255,0.4);
+    background:rgba(80,200,255,0.13);
+    color:#7dd8f8;
+  }
+  .schedule-detail-btn.publish {
+    border-color:rgba(80,200,255,0.5);
+    color:#7dd8f8;
+  }
+  .schedule-detail-btn.publish:hover,
+  .schedule-detail-btn.publish:focus-visible {
+    background:rgba(80,200,255,0.12);
+  }
   .schedule-star-btn {
     appearance:none; background:none; border:0; color:#7f7f7f;
     min-width:34px; padding:0 10px; cursor:pointer; font-size:17px; line-height:1;
@@ -2132,7 +2145,7 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.23.7";
+  const APP_VERSION = "2026.04.23.8";
   const CACHE_NAME_PREFIX = "ab-map-";
   async function getInstalledCacheVersion() {
     if (!("caches" in window)) return null;
@@ -2155,6 +2168,8 @@
   const VISITED_ENTRY_STORAGE_KEY = "ab-map-visited-entries";
   const STARRED_ENTRY_STORAGE_KEY = "ab-map-starred-entries";
   const ENTRY_NOTE_STORAGE_KEY = "ab-map-entry-notes";
+  const LIVE_ADMIN_PIN_SESSION_KEY = "ab-live-admin-pin";
+  const LIVE_UPDATES_POLL_INTERVAL = 2 * 60 * 1000;
   const SCHEDULE_CATEGORY_OPTIONS = [
     { key: "Burn", label: "Burn", shortLabel: "Burn" },
     { key: "Music", label: "Music", shortLabel: "Music" },
@@ -2167,6 +2182,7 @@
     { key: "Community", label: "Community", shortLabel: "Comm" },
   ];
   let scheduleData = baseScheduleData;
+  let liveScheduleUpdates = [];
   const oldWtfDetails = typeof OLD_WTF_DETAILS !== "undefined" ? OLD_WTF_DETAILS : { byCode: {} };
   const viewport = document.getElementById("viewport");
   const mapDiv = document.getElementById("map");
@@ -2598,7 +2614,7 @@
     };
   }
 
-  function normalizeCustomScheduleItems(items) {
+  function normalizeCustomScheduleItems(items, { isLive = false } = {}) {
     const dayMap = Object.fromEntries(baseScheduleData.days.map((day) => [day.date, day]));
     return (items || []).map((item) => {
       const day = dayMap[item.date];
@@ -2624,9 +2640,9 @@
         kind: "event",
         kindLabel: "Event",
         linkedCodes,
-        timeLabel: friendlyTimeLabel(start, end, endNextDay) || "Custom time",
+        timeLabel: friendlyTimeLabel(start, end, endNextDay) || (isLive ? "Live update" : "Custom time"),
         description: String(item.description || "").trim(),
-        sourceLabel: "Personal",
+        sourceLabel: isLive ? (String(item.sourceLabel || "").trim() || "Live update") : "Personal",
         sortStart: startMinutes,
         sortEnd: Number.isFinite(endMinutes) ? endMinutes + (endNextDay ? 24 * 60 : 0) : null,
         endNextDay,
@@ -2635,19 +2651,29 @@
         estimatedStart: Boolean(item.estimatedStart),
         estimatedEnd: Boolean(item.estimatedEnd),
         categories,
-        isCustom: true,
+        isCustom: !isLive,
+        isLive,
       };
     }).filter((item) => item && item.title);
   }
 
-  function buildRuntimeScheduleData(staticData, customRaw) {
+  function buildRuntimeScheduleData(staticData, customRaw, liveUpdates = []) {
+    const liveDeleteIds = new Set(
+      (liveUpdates || []).filter((u) => u.action === "delete").map((u) => String(u.id))
+    );
+    const liveUpserts = (liveUpdates || []).filter((u) => u.action === "upsert" && u.id);
+    const liveUpsertIds = new Set(liveUpserts.map((u) => String(u.id)));
+
     const entries = [
-      ...(staticData.entries || []).map((item) => runtimeScheduleItemWithOverride({
-        ...item,
-        linkedCodes: [...(item.linkedCodes || [])],
-        categories: [...(item.categories || [])],
-      }, scheduleBaseOverrides[item.id])),
-      ...normalizeCustomScheduleItems(customRaw),
+      ...(staticData.entries || [])
+        .filter((item) => !liveDeleteIds.has(String(item.id)) && !liveUpsertIds.has(String(item.id)))
+        .map((item) => runtimeScheduleItemWithOverride({
+          ...item,
+          linkedCodes: [...(item.linkedCodes || [])],
+          categories: [...(item.categories || [])],
+        }, scheduleBaseOverrides[item.id])),
+      ...normalizeCustomScheduleItems(customRaw).filter((item) => !liveDeleteIds.has(String(item.id))),
+      ...normalizeCustomScheduleItems(liveUpserts, { isLive: true }).filter((item) => !liveDeleteIds.has(String(item.id))),
     ];
 
     entries.sort((a, b) =>
@@ -2665,7 +2691,7 @@
         linkedCodes: [...(item.linkedCodes || [])],
         categories: [...(item.categories || [])],
       })),
-      ...entries.filter((item) => item.isCustom).map((item) => ({
+      ...entries.filter((item) => item.isCustom || item.isLive).map((item) => ({
         id: item.seriesId,
         title: item.title,
         kind: item.kind,
@@ -2678,7 +2704,8 @@
         sortStart: item.sortStart,
         sortEnd: item.sortEnd,
         categories: [...item.categories],
-        isCustom: true,
+        isCustom: item.isCustom || false,
+        isLive: item.isLive || false,
       })),
     ];
     const seriesById = Object.fromEntries(series.map((item) => [item.id, item]));
@@ -2741,7 +2768,7 @@
     safeWriteStorageJson(SCHEDULE_CUSTOM_STORAGE_KEY, customScheduleItems);
   }
 
-  scheduleData = buildRuntimeScheduleData(baseScheduleData, customScheduleItems);
+  scheduleData = buildRuntimeScheduleData(baseScheduleData, customScheduleItems, liveScheduleUpdates);
 
   function persistStarredScheduleIds() {
     safeWriteStorageJson(SCHEDULE_STAR_STORAGE_KEY, [...starredScheduleIds]);
@@ -2887,13 +2914,96 @@
   }
 
   function refreshScheduleData() {
-    scheduleData = buildRuntimeScheduleData(baseScheduleData, customScheduleItems);
+    scheduleData = buildRuntimeScheduleData(baseScheduleData, customScheduleItems, liveScheduleUpdates);
     if (!scheduleData.byDate?.[activeScheduleDate]) {
       activeScheduleDate = scheduleData.days[0]?.date || null;
     }
     if (activeScheduleEventId && !scheduleOccurrenceById(activeScheduleEventId)) {
       activeScheduleEventId = null;
     }
+  }
+
+  async function fetchLiveUpdates(silent = false) {
+    try {
+      const resp = await fetch("./schedule-updates.json");
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (!Array.isArray(data)) return;
+      const changed = JSON.stringify(data) !== JSON.stringify(liveScheduleUpdates);
+      liveScheduleUpdates = data;
+      if (changed) {
+        refreshScheduleData();
+        renderSchedule();
+        if (!silent) showPlainMessage("Live schedule updated.");
+      }
+    } catch {
+      // offline or Pi not reachable — keep current data
+    }
+  }
+
+  async function publishLiveUpdate(update) {
+    let pin = sessionStorage.getItem(LIVE_ADMIN_PIN_SESSION_KEY) || "";
+    if (!pin) {
+      pin = window.prompt("Admin password to publish to live feed:") || "";
+      if (!pin) return false;
+    }
+    try {
+      const resp = await fetch("./api/updates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${pin}` },
+        body: JSON.stringify(update),
+      });
+      if (resp.status === 401) {
+        sessionStorage.removeItem(LIVE_ADMIN_PIN_SESSION_KEY);
+        showPlainMessage("Wrong password — not published.");
+        return false;
+      }
+      if (!resp.ok) {
+        showPlainMessage("Server error — not published.");
+        return false;
+      }
+      sessionStorage.setItem(LIVE_ADMIN_PIN_SESSION_KEY, pin);
+      await fetchLiveUpdates(true);
+      showPlainMessage("Published to live feed!");
+      return true;
+    } catch {
+      showPlainMessage("Could not reach live server. Are you on the Pi network?");
+      return false;
+    }
+  }
+
+  async function removeLiveUpdate(id) {
+    let pin = sessionStorage.getItem(LIVE_ADMIN_PIN_SESSION_KEY) || "";
+    if (!pin) {
+      pin = window.prompt("Admin password to remove from live feed:") || "";
+      if (!pin) return false;
+    }
+    try {
+      const resp = await fetch(`./api/updates/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${pin}` },
+      });
+      if (resp.status === 401) {
+        sessionStorage.removeItem(LIVE_ADMIN_PIN_SESSION_KEY);
+        showPlainMessage("Wrong password.");
+        return false;
+      }
+      if (!resp.ok) {
+        showPlainMessage("Server error — not removed.");
+        return false;
+      }
+      sessionStorage.setItem(LIVE_ADMIN_PIN_SESSION_KEY, pin);
+      await fetchLiveUpdates(true);
+      showPlainMessage("Removed from live feed.");
+      return true;
+    } catch {
+      showPlainMessage("Could not reach live server. Are you on the Pi network?");
+      return false;
+    }
+  }
+
+  function liveUpdateForId(id) {
+    return liveScheduleUpdates.find((u) => String(u.id) === String(id)) || null;
   }
 
   appVersion.textContent = `app ${APP_VERSION} · cache …`;
@@ -4644,6 +4754,7 @@
     const enabled = SCHEDULE_CATEGORY_FILTERS.filter((filter) => scheduleCategoryState[filter.key]).map((filter) => filter.key);
     const starredMatch = scheduleStarredFilterEnabled && isScheduleItemStarred(item.id);
     const customMatch = scheduleCustomFilterEnabled && Boolean(item.isCustom);
+    const liveMatch = Boolean(item.isLive); // live feed events always visible
     const allCategoriesEnabled = enabled.length === SCHEDULE_CATEGORY_FILTERS.length;
     const categoryMatch =
       allCategoriesEnabled
@@ -4651,7 +4762,7 @@
         : enabled.length === 0
           ? false
           : categories.length > 0 && categories.some((category) => enabled.includes(category));
-    return categoryMatch || starredMatch || customMatch;
+    return categoryMatch || starredMatch || customMatch || liveMatch;
   }
 
   function scheduleCategoryHtml(item) {
@@ -5248,6 +5359,9 @@
       scheduleDetail.innerHTML = '<div class="schedule-detail-empty">Select an event or opening to see the full description and jump back to the map, or add your own custom event.</div>';
       return;
     }
+    const existingLiveEntry = liveUpdateForId(item.id);
+    const isInLiveFeed = Boolean(existingLiveEntry);
+    const canPublish = (item.isCustom || item.isEditedBase) && !isInLiveFeed;
     scheduleDetail.innerHTML = `
       <div class="schedule-detail-head">
         <div>
@@ -5257,6 +5371,8 @@
             <span>${escapeHtml(item.dayLabel)}</span>
             <span>${escapeHtml(item.timeLabel)}</span>
             ${scheduleItemStartedNow(item) ? '<span class="schedule-live-chip">Started</span>' : ""}
+            ${item.isLive ? '<span class="schedule-live-chip live-feed">Live</span>' : ""}
+            ${isInLiveFeed && !item.isLive ? '<span class="schedule-live-chip live-feed">In live feed</span>' : ""}
             ${item.isCustom ? '<span>Personal</span>' : ""}
             ${item.isEditedBase ? '<span>Edited</span>' : ""}
             ${item.estimatedStart ? '<span>Start est</span>' : ""}
@@ -5270,6 +5386,9 @@
           <button type="button" class="schedule-detail-btn star${isScheduleItemStarred(item.id) ? " active" : ""}" data-schedule-star="${escapeHtml(item.id)}">${isScheduleItemStarred(item.id) ? "★ Starred" : "☆ Star"}</button>
           ${(item.isCustom || item.isEditedBase) ? '<button type="button" class="schedule-detail-btn" data-schedule-share>Share QR</button>' : ""}
           <button type="button" class="schedule-detail-btn" data-schedule-edit>Edit</button>
+          ${canPublish ? '<button type="button" class="schedule-detail-btn publish" data-schedule-publish>Publish to live</button>' : ""}
+          ${isInLiveFeed ? '<button type="button" class="schedule-detail-btn publish" data-schedule-publish-update>Update live</button>' : ""}
+          ${isInLiveFeed ? '<button type="button" class="schedule-detail-btn danger" data-schedule-remove-live>Remove from live</button>' : ""}
           ${item.isCustom ? '<button type="button" class="schedule-detail-btn danger" data-schedule-delete>Delete</button>' : ""}
           ${item.isEditedBase ? '<button type="button" class="schedule-detail-btn danger" data-schedule-revert>Revert</button>' : ""}
         </div>
@@ -5313,6 +5432,49 @@
       activeScheduleEventId = item.id;
       renderSchedule();
       syncUiHistory();
+    });
+
+    function buildPublishPayload() {
+      if (item.isCustom) {
+        const raw = customScheduleItems.find((e) => e.id === item.id) || {};
+        return { action: "upsert", ...raw, id: item.id, sourceLabel: raw.sourceLabel || "Live update" };
+      }
+      if (item.isLive) {
+        return liveUpdateForId(item.id) || null;
+      }
+      // Edited base or plain base event — publish current runtime state
+      return {
+        action: "upsert",
+        id: item.id,
+        title: item.title,
+        date: item.date,
+        start: item.start,
+        end: item.end,
+        endNextDay: item.endNextDay || false,
+        estimatedStart: item.estimatedStart || false,
+        estimatedEnd: item.estimatedEnd || false,
+        description: item.description,
+        linkedCodes: item.linkedCodes || [],
+        categories: item.categories || [],
+        sourceLabel: item.isEditedBase ? "Live update (edited)" : "Live update",
+      };
+    }
+
+    scheduleDetail.querySelector("[data-schedule-publish]")?.addEventListener("click", async () => {
+      const payload = buildPublishPayload();
+      if (!payload) return;
+      await publishLiveUpdate(payload);
+      renderScheduleDetail(item);
+    });
+    scheduleDetail.querySelector("[data-schedule-publish-update]")?.addEventListener("click", async () => {
+      const payload = buildPublishPayload();
+      if (!payload) return;
+      await publishLiveUpdate(payload);
+      renderScheduleDetail(item);
+    });
+    scheduleDetail.querySelector("[data-schedule-remove-live]")?.addEventListener("click", async () => {
+      await removeLiveUpdate(item.id);
+      renderScheduleDetail(item);
     });
   }
 
@@ -8120,6 +8282,11 @@
     window.setTimeout(() => {
       maybeAutoRefreshAppBundle();
     }, 900);
+    // Fetch live schedule updates from the Pi server (silently on first load)
+    window.setTimeout(() => {
+      fetchLiveUpdates(true);
+    }, 1500);
+    setInterval(() => fetchLiveUpdates(true), LIVE_UPDATES_POLL_INTERVAL);
   }
   if (img.complete) init(); else img.addEventListener("load", init, { once: true });
   window.addEventListener("popstate", (ev) => {
