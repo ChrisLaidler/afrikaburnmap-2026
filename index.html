@@ -830,13 +830,13 @@
     margin:0; font-size:18px; line-height:1.2; flex:1 1 auto;
   }
   .schedule-actions {
-    display:flex; gap:6px; align-items:center;
+    display:flex; gap:4px; align-items:center;
   }
   .schedule-nav,
   .schedule-close {
     appearance:none; background:#222; color:#eee; border:1px solid #444;
-    border-radius:5px; min-width:28px; height:28px; padding:0 9px;
-    font-size:12px; line-height:1; cursor:pointer;
+    border-radius:5px; min-width:24px; height:24px; padding:0 7px;
+    font-size:11px; line-height:1; cursor:pointer;
   }
   .schedule-nav:hover,
   .schedule-nav:focus-visible,
@@ -1123,6 +1123,176 @@
   .schedule-detail-btn.danger {
     color:#ffb4b4;
     border-color:rgba(255,95,95,0.34);
+  }
+  .share-panel {
+    width:min(560px, calc(100vw - 24px));
+    max-height:min(90vh, 820px);
+  }
+  .share-body {
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    overflow:auto;
+  }
+  .share-copy {
+    font-size:14px;
+    line-height:1.45;
+    color:#d5d5d5;
+  }
+  .share-meta,
+  .share-event-list {
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .share-chip,
+  .share-code-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    border:1px solid #444;
+    background:#181818;
+    border-radius:999px;
+    padding:5px 9px;
+    font-size:11px;
+    color:#ddd;
+  }
+  .share-code-chip {
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing:0.02em;
+  }
+  .share-card {
+    border:1px solid #333;
+    border-radius:10px;
+    background:#151515;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .share-card h3 {
+    margin:0;
+    font-size:15px;
+  }
+  .share-card p {
+    margin:0;
+    font-size:13px;
+    line-height:1.45;
+    color:#cfcfcf;
+  }
+  .share-qr-wrap {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .share-qr-canvas {
+    width:min(78vw, 320px);
+    height:auto;
+    max-width:320px;
+    border-radius:12px;
+    background:#fff;
+    box-shadow:0 10px 28px rgba(0,0,0,0.35);
+  }
+  .share-actions,
+  .share-choice-actions {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .share-choice-actions { justify-content:flex-end; }
+  .share-btn {
+    appearance:none;
+    border:1px solid #474747;
+    background:#202020;
+    color:#eee;
+    border-radius:7px;
+    padding:8px 12px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .share-btn:hover,
+  .share-btn:focus-visible {
+    background:#2a2a2a;
+    border-color:#6b6b6b;
+    outline:none;
+  }
+  .share-btn.primary {
+    background:#0f6f50;
+    border-color:#2da373;
+    color:#f1fff7;
+  }
+  .share-btn.primary:hover,
+  .share-btn.primary:focus-visible {
+    background:#138560;
+    border-color:#46be8e;
+  }
+  .share-btn.danger {
+    background:#36161b;
+    border-color:#70404a;
+    color:#ffb9c3;
+  }
+  .share-file-label {
+    position:relative;
+    overflow:hidden;
+  }
+  .share-file-label input {
+    position:absolute;
+    inset:0;
+    opacity:0;
+    cursor:pointer;
+  }
+  .share-scan-video {
+    width:100%;
+    max-height:340px;
+    border-radius:10px;
+    background:#050505;
+    border:1px solid #2d2d2d;
+    object-fit:cover;
+  }
+  .share-preview-grid {
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+  .share-preview-block {
+    border:1px solid #333;
+    border-radius:9px;
+    background:#111;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .share-preview-block h4 {
+    margin:0;
+    font-size:13px;
+  }
+  .share-preview-title {
+    font-size:15px;
+    font-weight:600;
+    color:#f3f3f3;
+  }
+  .share-preview-notes {
+    white-space:pre-wrap;
+    font-size:12px;
+    line-height:1.45;
+    color:#cfcfcf;
+  }
+  .share-warning {
+    border:1px solid rgba(255,179,107,0.4);
+    background:rgba(255,179,107,0.08);
+    color:#ffd3a8;
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:13px;
+    line-height:1.4;
+  }
+  .share-error {
+    border-color:rgba(255,143,143,0.45);
+    background:rgba(255,143,143,0.09);
+    color:#ffc1c1;
   }
   .schedule-editor {
     display:grid; gap:10px;
@@ -1586,6 +1756,11 @@
     }
     .schedule-timeline-axis-track { height:28px; }
     .schedule-timeline-hour { font-size:9px; top:6px; }
+    .share-panel { width:100vw; max-height:84vh; border-radius:10px 10px 0 0; }
+    .share-body { padding:12px; }
+    .share-qr-canvas { width:min(80vw, 300px); }
+    .share-actions,
+    .share-choice-actions { flex-direction:column; }
   }
 </style>
 </head>
@@ -1648,7 +1823,7 @@
         <p><strong>Location warning:</strong> map locations may be incorrect, may change during the burn, and reality sometimes overwrites the map.</p>
         <p><strong>Event warning:</strong> some events, times, names, or links may be missing or wrong. Please treat the schedule as a helpful guide and double-check anything important on site or with the people running the event.</p>
       </div>
-      <p>Developed by Chris (AKA The Damn Dirty Hippie) from the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys">Greasemonkeys</button>. Feel free to pop by and say hi, or thanks, in person. Feedback, suggestions, or bugs/issues can be sent by <a href="mailto:chris.laidler+ab@gmail.com">e-mail</a>, or find me at the burn, to help improve this or future interactive AB maps.</p>
+      <p>Developed by Chris (AKA The Damn Dirty Hippie) from the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys">Greasemonkeys</button>. Feel free to pop by and say hi in person. Feedback, suggestions, or bugs/issues can be sent by <a href="mailto:chris.laidler+ab@gmail.com">e-mail</a>, or find me at the burn, to help improve this or potential future interactive AB maps.</p>
       <p>The <a href="https://bernardbravenboer.github.io/afrikaburnmap-2026/" target="_blank" rel="noopener noreferrer">original interactive map</a> project was created by Bernard from <button type="button" class="about-inline-link" data-about-search="Camp 404">camp 404</button>.</p>
       <p>This is an independent helper tool. There are no guarantees, and some information may still be incomplete or incorrect, but care has been taken to make it as accurate and useful as possible. Live GPS includes a short recent-movement trail. Orientation / heading information is only as accurate as the phone; a mis-calibrated compass can lead to inaccurate heading display.</p>
       <div class="about-links">
@@ -1706,6 +1881,7 @@
         <div class="schedule-actions">
           <button type="button" class="schedule-nav" id="schedule-help-btn" aria-label="Open schedule help">?</button>
           <button type="button" class="schedule-nav" id="schedule-add">Add</button>
+          <button type="button" class="schedule-nav" id="schedule-scan">Scan</button>
           <button type="button" class="schedule-nav" id="schedule-prev" aria-label="Previous burn day">‹</button>
           <button type="button" class="schedule-nav" id="schedule-today">Today</button>
           <button type="button" class="schedule-nav" id="schedule-next" aria-label="Next burn day">›</button>
@@ -1742,6 +1918,16 @@
       <div class="schedule-content" id="schedule-content"></div>
       <div class="schedule-detail" id="schedule-detail"></div>
     </div>
+  </section>
+</div>
+
+<div class="about-backdrop" id="share-backdrop" aria-hidden="true">
+  <section class="about-panel share-panel" role="dialog" aria-modal="true" aria-labelledby="share-title">
+    <div class="about-head">
+      <h2 id="share-title">Share custom event</h2>
+      <button type="button" class="about-close" id="share-close" aria-label="Close share panel">×</button>
+    </div>
+    <div class="share-body" id="share-body"></div>
   </section>
 </div>
 
@@ -1800,11 +1986,12 @@
 <script src="project_details.js"></script>
 <script src="schedule_data.js"></script>
 <script src="old_wtf_details.js"></script>
+<script src="qrcode.js"></script>
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.23.2";
-  const APP_CACHE_VERSION = "v52";
+  const APP_VERSION = "2026.04.23.3";
+  const APP_CACHE_VERSION = "v53";
   const projectDetails = typeof PROJECT_DETAILS !== "undefined" ? PROJECT_DETAILS : { byCode: {} };
   const EMPTY_SCHEDULE_DATA = { days: [], entries: [], byDate: {}, byLinkedCode: {}, series: [], seriesById: {}, seriesByLinkedCode: {} };
   const baseScheduleData = typeof SCHEDULE_DATA !== "undefined" ? SCHEDULE_DATA : EMPTY_SCHEDULE_DATA;
@@ -1858,12 +2045,16 @@
   const scheduleBackdrop = document.getElementById("schedule-backdrop");
   const scheduleClose = document.getElementById("schedule-close");
   const scheduleAdd = document.getElementById("schedule-add");
+  const scheduleScan = document.getElementById("schedule-scan");
   const schedulePrev = document.getElementById("schedule-prev");
   const scheduleNext = document.getElementById("schedule-next");
   const scheduleToday = document.getElementById("schedule-today");
   const scheduleDays = document.getElementById("schedule-days");
   const scheduleContent = document.getElementById("schedule-content");
   const scheduleDetail = document.getElementById("schedule-detail");
+  const shareBackdrop = document.getElementById("share-backdrop");
+  const shareClose = document.getElementById("share-close");
+  const shareBody = document.getElementById("share-body");
   const scheduleViewToggle = document.getElementById("schedule-view-toggle");
   const scheduleCategoryFilters = document.getElementById("schedule-category-filters");
   const scheduleFilterEvents = document.getElementById("schedule-filter-events");
@@ -1883,6 +2074,11 @@
   let detailsStarToggle = null;
   let detailsStarToggleEntry = null;
   let detailsVisitToggle = null;
+  let shareModalState = null;
+  let shareScanStream = null;
+  let shareScanInterval = null;
+  let shareScanBusy = false;
+  let shareScanDetector = null;
   let detailsVisitToggleEntry = null;
   let detailsGotoEntry = null;
   let detailsMode = "fit";
@@ -1944,6 +2140,123 @@
       .filter((value) => allowed.has(value)))];
   }
 
+  function slugifySharePart(value, fallback = "event") {
+    const normalized = String(value || "")
+      .toLowerCase()
+      .replace(/&/g, " and ")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 24);
+    return normalized || fallback;
+  }
+
+  function baseCustomShareIdForItem(item) {
+    const datePart = String(item?.date || "").replace(/-/g, "") || "202604";
+    const startPart = String(item?.start || "").replace(/:/g, "") || "0000";
+    const namePart = slugifySharePart(item?.title, "event");
+    return `ab26-${datePart}-${startPart}-${namePart}`;
+  }
+
+  function nextCustomShareId(baseId, excludeLocalId = null) {
+    const taken = new Set(customScheduleItems
+      .filter((item) => item && item.id !== excludeLocalId)
+      .map((item) => String(item.shareId || "").trim())
+      .filter(Boolean));
+    let counter = 1;
+    let candidate = `${baseId}-${counter}`;
+    while (taken.has(candidate)) {
+      counter += 1;
+      candidate = `${baseId}-${counter}`;
+    }
+    return candidate;
+  }
+
+  function ensureCustomShareId(item, excludeLocalId = null) {
+    const existing = String(item?.shareId || "").trim();
+    if (existing) return existing;
+    return nextCustomShareId(baseCustomShareIdForItem(item), excludeLocalId);
+  }
+
+  function normalizeEventText(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  }
+
+  function eventLooksSimilar(existing, incoming) {
+    if (!existing || !incoming) return false;
+    const sameDate = String(existing.date || "") === String(incoming.date || "");
+    const sameStart = String(existing.start || "") === String(incoming.start || "");
+    const existingTitle = normalizeEventText(existing.title);
+    const incomingTitle = normalizeEventText(incoming.title);
+    const sameTitle = existingTitle && incomingTitle && (
+      existingTitle === incomingTitle
+      || existingTitle.includes(incomingTitle)
+      || incomingTitle.includes(existingTitle)
+    );
+    return (sameDate && sameStart && sameTitle) || (sameDate && sameTitle);
+  }
+
+  function compactSharedEventPayload(item) {
+    return {
+      v: 1,
+      t: "ab-event",
+      i: String(item.shareId || "").trim(),
+      n: String(item.title || "").trim(),
+      d: String(item.date || ""),
+      s: String(item.start || ""),
+      e: String(item.end || ""),
+      x: item.endNextDay ? 1 : 0,
+      o: String(item.description || "").trim(),
+      l: sanitizeLinkedCodes(item.linkedCodes),
+      c: sanitizeScheduleCategories(item.categories),
+    };
+  }
+
+  function encodeUtf8Base64Url(text) {
+    const bytes = new TextEncoder().encode(String(text || ""));
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+
+  function decodeUtf8Base64Url(value) {
+    const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function serializeSharedEventPayload(item) {
+    return `ABMAP2026:${encodeUtf8Base64Url(JSON.stringify(compactSharedEventPayload(item)))}`;
+  }
+
+  function parseSharedEventPayload(rawValue) {
+    const raw = String(rawValue || "").trim();
+    if (!raw.startsWith("ABMAP2026:")) throw new Error("This QR code is not an AfrikaBurn map event.");
+    const payload = JSON.parse(decodeUtf8Base64Url(raw.slice("ABMAP2026:".length)));
+    if (!payload || payload.t !== "ab-event" || payload.v !== 1) {
+      throw new Error("Unsupported AfrikaBurn event QR format.");
+    }
+    const normalized = {
+      shareId: String(payload.i || "").trim(),
+      title: String(payload.n || "").trim(),
+      date: String(payload.d || ""),
+      start: String(payload.s || ""),
+      end: String(payload.e || ""),
+      endNextDay: Boolean(payload.x),
+      description: String(payload.o || "").trim(),
+      linkedCodes: sanitizeLinkedCodes(payload.l),
+      categories: sanitizeScheduleCategories(payload.c),
+    };
+    if (!normalized.shareId || !normalized.title || !normalized.date || !normalized.start) {
+      throw new Error("This event QR code is missing required fields.");
+    }
+    return normalized;
+  }
+
   function normalizeCustomScheduleItems(items) {
     const dayMap = Object.fromEntries(baseScheduleData.days.map((day) => [day.date, day]));
     return (items || []).map((item) => {
@@ -1955,10 +2268,12 @@
       const endNextDay = Boolean(item.endNextDay) || (start && end && end <= start);
       const linkedCodes = sanitizeLinkedCodes(item.linkedCodes);
       const categories = sanitizeScheduleCategories(item.categories);
+      const shareId = ensureCustomShareId({ ...item, title: item.title, date: day.date, start }, id);
       const startMinutes = start ? Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5)) : null;
       const endMinutes = end ? Number(end.slice(0, 2)) * 60 + Number(end.slice(3, 5)) : null;
       return {
         id,
+        shareId,
         seriesId: id,
         date: day.date,
         dayKey: day.key,
@@ -1973,6 +2288,8 @@
         sortStart: startMinutes,
         sortEnd: Number.isFinite(endMinutes) ? endMinutes + (endNextDay ? 24 * 60 : 0) : null,
         endNextDay,
+        start,
+        end,
         categories,
         isCustom: true,
       };
@@ -2065,6 +2382,20 @@
   let starredEntryKeys = new Set(safeReadStorageJson(STARRED_ENTRY_STORAGE_KEY, []));
   let visitedEntryKeys = new Set(safeReadStorageJson(VISITED_ENTRY_STORAGE_KEY, []));
   let entryNotesByKey = safeReadStorageJson(ENTRY_NOTE_STORAGE_KEY, {});
+
+  let customShareMigrationChanged = false;
+  customScheduleItems = (customScheduleItems || []).map((item) => {
+    const shareId = ensureCustomShareId(item, item?.id || null);
+    if (shareId !== item?.shareId) {
+      customShareMigrationChanged = true;
+      return { ...item, shareId };
+    }
+    return item;
+  });
+  if (customShareMigrationChanged) {
+    safeWriteStorageJson(SCHEDULE_CUSTOM_STORAGE_KEY, customScheduleItems);
+  }
+
   scheduleData = buildRuntimeScheduleData(baseScheduleData, customScheduleItems);
 
   function persistStarredScheduleIds() {
@@ -4127,11 +4458,13 @@
 
   function customScheduleFormValues(item = null) {
     const endNextDay = Boolean(item?.endNextDay || (Number.isFinite(item?.sortStart) && Number.isFinite(item?.sortEnd) && item.sortEnd >= 24 * 60));
-    const endValue = Number.isFinite(item?.sortEnd) ? `${pad2(Math.floor((item.sortEnd % (24 * 60)) / 60))}:${pad2(item.sortEnd % 60)}` : "";
+    const endValue = item?.end || (Number.isFinite(item?.sortEnd) ? `${pad2(Math.floor((item.sortEnd % (24 * 60)) / 60))}:${pad2(item.sortEnd % 60)}` : "");
+    const startValue = item?.start || (Number.isFinite(item?.sortStart) ? `${pad2(Math.floor(item.sortStart / 60))}:${pad2(item.sortStart % 60)}` : "");
     return {
+      shareId: item?.shareId || "",
       title: item?.title || "",
       date: item?.date || activeScheduleDate || defaultScheduleDate() || baseScheduleData.days[0]?.date || "",
-      start: Number.isFinite(item?.sortStart) ? `${pad2(Math.floor(item.sortStart / 60))}:${pad2(item.sortStart % 60)}` : "",
+      start: startValue,
       end: endValue,
       endNextDay,
       linkedCodes: (item?.linkedCodes || []).join(", "),
@@ -4208,6 +4541,7 @@
           <h3 class="schedule-detail-title">${isEditing ? "Edit custom event" : "Add custom event"}</h3>
           <div class="schedule-detail-meta">
             <span class="schedule-live-chip">Personal</span>
+            ${values.shareId ? `<span class="share-code-chip">${escapeHtml(values.shareId)}</span>` : ""}
           </div>
         </div>
         <div class="schedule-detail-actions">
@@ -4349,8 +4683,14 @@
       const categories = sanitizeScheduleCategories(fd.getAll("categories"));
       if (!title || !date || !start) return;
       const id = scheduleEditorState?.item?.id || `custom-${Date.now()}`;
+      const shareId = ensureCustomShareId({
+        shareId: scheduleEditorState?.item?.shareId || "",
+        title,
+        date,
+        start,
+      }, id);
       customScheduleItems = customScheduleItems.filter((item) => item.id !== id);
-      customScheduleItems.push({ id, title, date, start, end, endNextDay, description, linkedCodes, categories });
+      customScheduleItems.push({ id, shareId, title, date, start, end, endNextDay, description, linkedCodes, categories });
       persistCustomScheduleItems();
       refreshScheduleData();
       scheduleEditorState = null;
@@ -4386,6 +4726,7 @@
             <span>${escapeHtml(item.timeLabel)}</span>
             ${scheduleItemStartedNow(item) ? '<span class="schedule-live-chip">Started</span>' : ""}
             ${item.isCustom ? '<span>Personal</span>' : ""}
+            ${item.isCustom && item.shareId ? `<span class="share-code-chip">${escapeHtml(item.shareId)}</span>` : ""}
             ${item.linkedCodes.map((code) => `<span>${escapeHtml(code)}</span>`).join("")}
             ${scheduleCategoryHtml(item)}
             ${item.sourceLabel ? `<span class="schedule-source-label" data-source="${escapeHtml(item.sourceLabel)}">${escapeHtml(item.sourceLabel)}</span>` : ""}
@@ -4393,7 +4734,7 @@
         </div>
         <div class="schedule-detail-actions">
           <button type="button" class="schedule-detail-btn star${isScheduleItemStarred(item.id) ? " active" : ""}" data-schedule-star="${escapeHtml(item.id)}">${isScheduleItemStarred(item.id) ? "★ Starred" : "☆ Star"}</button>
-          ${item.isCustom ? '<button type="button" class="schedule-detail-btn" data-schedule-edit>Edit</button><button type="button" class="schedule-detail-btn danger" data-schedule-delete>Delete</button>' : ""}
+          ${item.isCustom ? '<button type="button" class="schedule-detail-btn" data-schedule-share>Share QR</button><button type="button" class="schedule-detail-btn" data-schedule-edit>Edit</button><button type="button" class="schedule-detail-btn danger" data-schedule-delete>Delete</button>' : ""}
         </div>
       </div>
       <p class="schedule-detail-description">${escapeHtml(item.description)}</p>
@@ -4414,6 +4755,9 @@
       scheduleEditorState = { item };
       renderScheduleDetail(item);
     });
+    scheduleDetail.querySelector("[data-schedule-share]")?.addEventListener("click", () => {
+      openShareModal({ mode: "share", item });
+    });
     scheduleDetail.querySelector("[data-schedule-delete]")?.addEventListener("click", () => {
       customScheduleItems = customScheduleItems.filter((entry) => entry.id !== item.id);
       persistCustomScheduleItems();
@@ -4424,6 +4768,299 @@
       renderSchedule();
       syncUiHistory();
     });
+  }
+
+  function sharePreviewHtml(item) {
+    if (!item) return "";
+    const dateLabel = scheduleData.days.find((day) => day.date === item.date)?.longLabel || item.date || "Unknown day";
+    const timeLabel = friendlyTimeLabel(item.start, item.end, item.endNextDay) || item.timeLabel || "Custom time";
+    return `
+      <div class="share-preview-block">
+        <div class="share-preview-title">${escapeHtml(item.title)}</div>
+        <div class="share-meta">
+          <span class="share-chip">${escapeHtml(dateLabel)}</span>
+          <span class="share-chip">${escapeHtml(timeLabel)}</span>
+          ${item.shareId ? `<span class="share-code-chip">${escapeHtml(item.shareId)}</span>` : ""}
+          ${(item.linkedCodes || []).map((code) => `<span class="share-chip">${escapeHtml(code)}</span>`).join("")}
+          ${(item.categories || []).map((category) => `<span class="share-chip">${escapeHtml(category)}</span>`).join("")}
+        </div>
+        ${item.description ? `<div class="share-preview-notes">${escapeHtml(item.description)}</div>` : ""}
+      </div>
+    `;
+  }
+
+  function stopShareScan() {
+    if (shareScanInterval) {
+      clearInterval(shareScanInterval);
+      shareScanInterval = null;
+    }
+    if (shareScanStream) {
+      for (const track of shareScanStream.getTracks()) track.stop();
+      shareScanStream = null;
+    }
+    shareScanBusy = false;
+  }
+
+  function closeShareModal() {
+    stopShareScan();
+    shareModalState = null;
+    shareBackdrop.classList.remove("open");
+    shareBackdrop.setAttribute("aria-hidden", "true");
+  }
+
+  function openShareModal(state) {
+    stopShareScan();
+    shareModalState = state;
+    shareBackdrop.classList.add("open");
+    shareBackdrop.setAttribute("aria-hidden", "false");
+    renderShareModal();
+  }
+
+  function importedEventMatch(incoming) {
+    const exact = customScheduleItems.find((item) => String(item.shareId || "") === String(incoming.shareId || ""));
+    if (exact) return { type: "exact", item: exact };
+    const similar = customScheduleItems.find((item) => eventLooksSimilar(item, incoming));
+    if (similar) return { type: "similar", item: similar };
+    return null;
+  }
+
+  function normalizeImportedEventForStorage(incoming, existing = null, mode = "overwrite") {
+    const useExistingFallback = mode === "update" && existing;
+    return {
+      id: existing?.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      shareId: String(incoming.shareId || existing?.shareId || "").trim(),
+      title: incoming.title || (useExistingFallback ? existing.title : ""),
+      date: incoming.date || (useExistingFallback ? existing.date : ""),
+      start: incoming.start || (useExistingFallback ? existing.start : ""),
+      end: incoming.end || (useExistingFallback ? existing.end : ""),
+      endNextDay: incoming.end ? Boolean(incoming.endNextDay) : (useExistingFallback ? Boolean(existing?.endNextDay) : Boolean(incoming.endNextDay)),
+      description: incoming.description || (useExistingFallback ? String(existing?.description || "") : ""),
+      linkedCodes: incoming.linkedCodes?.length ? [...incoming.linkedCodes] : (useExistingFallback ? sanitizeLinkedCodes(existing?.linkedCodes) : []),
+      categories: incoming.categories?.length ? [...incoming.categories] : (useExistingFallback ? sanitizeScheduleCategories(existing?.categories) : []),
+    };
+  }
+
+  function createImportedCopy(incoming) {
+    const baseId = String(incoming.shareId || baseCustomShareIdForItem(incoming)).replace(/-\d+$/, "");
+    const nextShareId = nextCustomShareId(baseId);
+    return {
+      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      shareId: nextShareId,
+      title: incoming.title,
+      date: incoming.date,
+      start: incoming.start,
+      end: incoming.end,
+      endNextDay: Boolean(incoming.endNextDay),
+      description: incoming.description,
+      linkedCodes: [...incoming.linkedCodes],
+      categories: [...incoming.categories],
+    };
+  }
+
+  function saveImportedEvent(incoming, choice, matched = null) {
+    let nextItem = null;
+    if (choice === "new") {
+      nextItem = createImportedCopy(incoming);
+      customScheduleItems.push(nextItem);
+    } else {
+      const target = matched?.item || null;
+      nextItem = normalizeImportedEventForStorage(incoming, target, choice);
+      if (!nextItem.shareId) nextItem.shareId = ensureCustomShareId(nextItem, target?.id || null);
+      customScheduleItems = customScheduleItems.filter((item) => item.id !== target?.id);
+      customScheduleItems.push(nextItem);
+    }
+    persistCustomScheduleItems();
+    refreshScheduleData();
+    activeScheduleEventId = nextItem.id;
+    setScheduleDate(nextItem.date);
+    renderSchedule();
+    syncUiHistory();
+    closeShareModal();
+    showPlainMessage(choice === "new" ? "Imported as new custom event" : "Imported event saved");
+  }
+
+  function renderShareModal() {
+    if (!shareModalState) {
+      shareBody.innerHTML = "";
+      return;
+    }
+    if (shareModalState.mode === "share") {
+      const item = shareModalState.item;
+      const payload = serializeSharedEventPayload(item);
+      shareBody.innerHTML = `
+        <div class="share-card">
+          <h3>${escapeHtml(item.title)}</h3>
+          <p class="share-copy">Show this QR on one phone and scan it from the map app on another phone. The event keeps its shared ID so later revisions can update the same event instead of duplicating it.</p>
+          <div class="share-meta">
+            <span class="share-code-chip">${escapeHtml(item.shareId || "")}</span>
+            <span class="share-chip">${escapeHtml(item.dayLabel || (scheduleData.days.find((day) => day.date === item.date)?.label || item.date || ""))}</span>
+            <span class="share-chip">${escapeHtml(item.timeLabel || friendlyTimeLabel(item.start, item.end, item.endNextDay) || "Custom time")}</span>
+          </div>
+          <div class="share-qr-wrap">
+            <canvas class="share-qr-canvas" id="share-qr-canvas"></canvas>
+          </div>
+          <div class="share-actions">
+            <a class="share-btn primary" id="share-download-btn" download="${escapeHtml((item.shareId || "ab-event") + ".png")}" href="#">Download QR image</a>
+            <button type="button" class="share-btn" id="share-close-btn">Done</button>
+          </div>
+        </div>
+        ${sharePreviewHtml(item)}
+      `;
+      const canvas = document.getElementById("share-qr-canvas");
+      const download = document.getElementById("share-download-btn");
+      QRCodeGenerator.renderToCanvas(canvas, payload, { level: "L", scale: 8, margin: 4, dark: "#111111", light: "#ffffff" });
+      download.href = canvas.toDataURL("image/png");
+      document.getElementById("share-close-btn")?.addEventListener("click", closeShareModal);
+      return;
+    }
+    if (shareModalState.mode === "scan") {
+      shareBody.innerHTML = `
+        <div class="share-card">
+          <h3>Scan event QR</h3>
+          <p class="share-copy">Point your camera at a custom-event QR code, or pick a saved QR image from your phone.</p>
+          <video class="share-scan-video" id="share-scan-video" autoplay playsinline muted></video>
+          <div class="share-actions">
+            <label class="share-btn share-file-label">Scan saved image<input type="file" id="share-file-input" accept="image/*"></label>
+            <button type="button" class="share-btn" id="share-retry-scan">Retry camera</button>
+            <button type="button" class="share-btn" id="share-cancel-scan">Cancel</button>
+          </div>
+          <div class="share-warning" id="share-scan-status">Starting camera…</div>
+        </div>
+      `;
+      document.getElementById("share-cancel-scan")?.addEventListener("click", closeShareModal);
+      document.getElementById("share-retry-scan")?.addEventListener("click", () => {
+        openShareModal({ mode: "scan" });
+      });
+      document.getElementById("share-file-input")?.addEventListener("change", async (ev) => {
+        const file = ev.currentTarget.files?.[0];
+        if (!file) return;
+        try {
+          if (!("BarcodeDetector" in window)) throw new Error("QR scanning is not supported in this browser.");
+          shareScanDetector ||= new BarcodeDetector({ formats: ["qr_code"] });
+          const image = await createImageBitmap(file);
+          const hits = await shareScanDetector.detect(image);
+          if (!hits.length) throw new Error("No QR code found in that image.");
+          const raw = hits[0].rawValue || "";
+          handleImportedQrText(raw);
+        } catch (error) {
+          openShareModal({ mode: "error", message: error.message || "Could not read that QR image." });
+        }
+      });
+      startShareScanCamera();
+      return;
+    }
+    if (shareModalState.mode === "resolve") {
+      const { incoming, matched } = shareModalState;
+      const warning = matched?.type === "exact"
+        ? "An existing custom event with the same shared ID was found."
+        : "A similar custom event was found locally.";
+      shareBody.innerHTML = `
+        <div class="share-card">
+          <h3>Import custom event</h3>
+          <div class="share-warning">${escapeHtml(warning)}</div>
+          <div class="share-preview-grid">
+            <div>
+              <h4>Incoming event</h4>
+              ${sharePreviewHtml(incoming)}
+            </div>
+            ${matched?.item ? `<div><h4>Matched local event</h4>${sharePreviewHtml({ ...matched.item, timeLabel: friendlyTimeLabel(matched.item.start, matched.item.end, matched.item.endNextDay) })}</div>` : ""}
+          </div>
+          <div class="share-choice-actions">
+            <button type="button" class="share-btn" data-share-choice="update">Update</button>
+            <button type="button" class="share-btn danger" data-share-choice="overwrite">Overwrite</button>
+            <button type="button" class="share-btn primary" data-share-choice="new">Make new</button>
+          </div>
+        </div>
+      `;
+      for (const button of shareBody.querySelectorAll("[data-share-choice]")) {
+        button.addEventListener("click", () => {
+          saveImportedEvent(incoming, button.dataset.shareChoice, matched);
+        });
+      }
+      return;
+    }
+    if (shareModalState.mode === "imported") {
+      const incoming = shareModalState.incoming;
+      shareBody.innerHTML = `
+        <div class="share-card">
+          <h3>Import custom event</h3>
+          <p class="share-copy">This event is ready to import into your local schedule.</p>
+          ${sharePreviewHtml(incoming)}
+          <div class="share-choice-actions">
+            <button type="button" class="share-btn" id="share-import-cancel">Cancel</button>
+            <button type="button" class="share-btn primary" id="share-import-save">Import event</button>
+          </div>
+        </div>
+      `;
+      document.getElementById("share-import-cancel")?.addEventListener("click", closeShareModal);
+      document.getElementById("share-import-save")?.addEventListener("click", () => {
+        saveImportedEvent(incoming, "overwrite", null);
+      });
+      return;
+    }
+    if (shareModalState.mode === "error") {
+      shareBody.innerHTML = `
+        <div class="share-card">
+          <h3>QR import problem</h3>
+          <div class="share-warning share-error">${escapeHtml(shareModalState.message || "Could not import that QR code.")}</div>
+          <div class="share-actions">
+            <button type="button" class="share-btn" id="share-error-retry">Try again</button>
+            <button type="button" class="share-btn" id="share-error-close">Close</button>
+          </div>
+        </div>
+      `;
+      document.getElementById("share-error-retry")?.addEventListener("click", () => openShareModal({ mode: "scan" }));
+      document.getElementById("share-error-close")?.addEventListener("click", closeShareModal);
+    }
+  }
+
+  async function startShareScanCamera() {
+    const status = document.getElementById("share-scan-status");
+    const video = document.getElementById("share-scan-video");
+    stopShareScan();
+    if (!("BarcodeDetector" in window)) {
+      if (status) status.textContent = "QR scanning is not supported in this browser. Try a newer Chrome/Safari build on your phone.";
+      return;
+    }
+    try {
+      shareScanDetector ||= new BarcodeDetector({ formats: ["qr_code"] });
+      shareScanStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      if (!video) return;
+      video.srcObject = shareScanStream;
+      await video.play();
+      if (status) status.textContent = "Looking for a QR code…";
+      shareScanInterval = window.setInterval(async () => {
+        if (!shareScanDetector || !video || shareScanBusy || video.readyState < 2) return;
+        shareScanBusy = true;
+        try {
+          const hits = await shareScanDetector.detect(video);
+          if (hits.length) {
+            const raw = hits[0].rawValue || "";
+            handleImportedQrText(raw);
+          }
+        } catch {
+          // keep polling
+        } finally {
+          shareScanBusy = false;
+        }
+      }, 250);
+    } catch (error) {
+      if (status) status.textContent = error.message || "Could not start the camera.";
+    }
+  }
+
+  function handleImportedQrText(rawValue) {
+    try {
+      const incoming = parseSharedEventPayload(rawValue);
+      const matched = importedEventMatch(incoming);
+      if (matched) openShareModal({ mode: "resolve", incoming, matched });
+      else openShareModal({ mode: "imported", incoming });
+    } catch (error) {
+      openShareModal({ mode: "error", message: error.message || "Could not import that QR code." });
+    }
   }
 
   function clampScheduleEditorHeight(value) {
@@ -4515,6 +5152,9 @@
     }
     syncUiHistory();
   });
+  scheduleScan?.addEventListener("click", () => {
+    openShareModal({ mode: "scan" });
+  });
   scheduleClose.addEventListener("click", () => {
     closeSchedule();
     syncUiHistory();
@@ -4524,6 +5164,10 @@
       closeSchedule();
       syncUiHistory();
     }
+  });
+  shareClose?.addEventListener("click", closeShareModal);
+  shareBackdrop?.addEventListener("click", (ev) => {
+    if (ev.target === shareBackdrop) closeShareModal();
   });
   schedulePrev.addEventListener("click", () => {
     const currentIndex = scheduleData.days.findIndex((day) => day.date === (activeScheduleDate || defaultScheduleDate()));

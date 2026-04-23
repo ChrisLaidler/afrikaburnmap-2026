@@ -1,6 +1,6 @@
 // Service worker: pre-cache the small set of static assets so the site works offline.
 // Bump CACHE_VERSION when any of the cached files change so clients fetch a fresh copy.
-const CACHE_VERSION = "v52";
+const CACHE_VERSION = "v53";
 const CACHE_NAME = "ab-map-" + CACHE_VERSION;
 const ASSETS = [
   "./",
@@ -9,6 +9,7 @@ const ASSETS = [
   "./project_details.js",
   "./schedule_data.js",
   "./old_wtf_details.js",
+  "./qrcode.js",
   "./icon-32.png",
   "./2026_AfrikaBurnMap-scaled.jpg",
   "./2026_Site_map_highres.jpg",

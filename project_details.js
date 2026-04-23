@@ -2441,7 +2441,7 @@ const PROJECT_DETAILS = (() => {
     ],
     "familyFriendly": "MAYBE",
     "times": "Day Time, Night Time",
-    "description": "We are 'This is Fine' Lab camp where curiosity is the only entry requirement. By day, we host workshops, talks, and experiments - and anyone can run their own session. Our open schedule board and open mic invite any burner to share their story. Explore strange installations, then stay for drinks and DJ sets after sunset. Open daily from 3 pm.",
+    "description": "We’re building a sci-fi lab-museum filled with light, sound, chemistry, and all kinds of strange beauty - a place you can step into and feel like a slightly mad scientist for a while.",
     "additionalDetails": "Family friendly: MAYBE\nOperating times: Day Time, Night Time",
     "links": [
       {
