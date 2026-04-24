@@ -710,18 +710,6 @@
     box-shadow:0 14px 40px rgba(0,0,0,0.5);
     display:flex; flex-direction:column;
   }
-  #about-backdrop {
-    padding:0;
-  }
-  #about-backdrop .about-panel {
-    width:100vw;
-    max-width:none;
-    height:100dvh;
-    max-height:none;
-    border:0;
-    border-radius:0;
-    box-shadow:none;
-  }
   .about-head {
     display:flex; align-items:center; justify-content:space-between;
     gap:12px; padding:12px 14px; border-bottom:1px solid #333;
@@ -2760,6 +2748,7 @@
         estimatedStart: Boolean(item.estimatedStart),
         estimatedEnd: Boolean(item.estimatedEnd),
         categories,
+        wtfHours: Boolean(item.wtfHours),
         isCustom: !isLive,
         isLive,
       };
@@ -3147,6 +3136,7 @@
         return false;
       }
       sessionStorage.setItem(LIVE_ADMIN_PIN_SESSION_KEY, pin);
+      sessionStorage.setItem(LIVE_SERVER_URL_SESSION_KEY, liveServerBase);
       isLiveAdmin = true;
       startLiveAuthPing();
       updateLiveAuthUi();
@@ -3202,6 +3192,7 @@
         return false;
       }
       sessionStorage.setItem(LIVE_ADMIN_PIN_SESSION_KEY, pin);
+      sessionStorage.setItem(LIVE_SERVER_URL_SESSION_KEY, liveServerBase);
       isLiveAdmin = true;
       startLiveAuthPing();
       updateLiveAuthUi();
