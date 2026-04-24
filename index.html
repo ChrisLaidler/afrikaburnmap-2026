@@ -8468,6 +8468,28 @@
     for (const p of hitPins) p.style.transform = `scale(${inv})`;
   }
 
+  // Temporary overlays shown while hovering a section filter label.
+  const hoverHighlightOverlays = [];
+  function showLegendHoverHighlights(section) {
+    clearLegendHoverHighlights();
+    for (const { el, entry } of hotspots) {
+      if (entry.section !== section) continue;
+      if (el.classList.contains("filtered-out")) continue;
+      const ov = document.createElement("div");
+      ov.className = "hit-overlay";
+      ov.style.left   = (parseFloat(el.style.left)   - 2) + "px";
+      ov.style.top    = (parseFloat(el.style.top)    - 2) + "px";
+      ov.style.width  = (parseFloat(el.style.width)  + 4) + "px";
+      ov.style.height = (parseFloat(el.style.height) + 4) + "px";
+      mapDiv.appendChild(ov);
+      hoverHighlightOverlays.push(ov);
+    }
+  }
+  function clearLegendHoverHighlights() {
+    for (const ov of hoverHighlightOverlays) ov.remove();
+    hoverHighlightOverlays.length = 0;
+  }
+
   function scoreSearchHit(el, qs) {
     const code = (el.dataset.code || "").toLowerCase();
     const name = (el.dataset.name || "").toLowerCase();
@@ -8748,6 +8770,14 @@
   fPlaza.addEventListener("change", applyFilter);
   fSupport.addEventListener("change", applyFilter);
   fToilet.addEventListener("change", applyFilter);
+  const sectionFilterMap = { f_theme: "theme", f_art: "art", f_occ: "occ", f_plaza: "plaza", f_support: "support", f_toilet: "toilet" };
+  for (const label of document.querySelectorAll(".filters label")) {
+    const input = label.querySelector("input[type=checkbox]");
+    const section = input && sectionFilterMap[input.id];
+    if (!section) continue;
+    label.addEventListener("mouseenter", () => showLegendHoverHighlights(section));
+    label.addEventListener("mouseleave", clearLegendHoverHighlights);
+  }
   fHighRes.addEventListener("change", () => {
     cancelInitialGpsFrame();
     currentMap = fHighRes.checked ? MAP_SOURCES.highres : MAP_SOURCES.standard;
