@@ -6,7 +6,16 @@ Serves all static files from the current directory plus a tiny write API so
 power users can push live schedule additions/edits/deletions to connected clients.
 
 Usage:
-    python3 pi_server.py [--port 8080] [--password secret]
+    # Plain HTTP (no GPS in browser, no warnings):
+    python3 pi_server.py --port 80 --password secret
+
+    # HTTPS only (GPS works, one-time self-signed cert warning):
+    python3 pi_server.py --port 443 --password secret \
+        --ssl-cert cert.pem --ssl-key key.pem --no-http-redirect
+
+    # HTTPS + HTTP redirect (single instance serving both):
+    python3 pi_server.py --port 443 --password secret \
+        --ssl-cert cert.pem --ssl-key key.pem
 
 API — all via POST /api/updates:
     { "action": "sync", "updates": [...] }
@@ -29,9 +38,10 @@ Public:
 
 import argparse
 import json
+import ssl
 import time
 import threading
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import HTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHandler
 from pathlib import Path
 
 UPDATES_FILE = "schedule-updates.json"
@@ -78,7 +88,6 @@ _CAPTIVE_PATHS = {
 
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
-        # Captive portal detection: redirect to the map page.
         path = self.path.split("?")[0].rstrip("/") or "/"
         if path in _CAPTIVE_PATHS:
             self.send_response(302)
@@ -104,8 +113,6 @@ class Handler(SimpleHTTPRequestHandler):
 
         action = str(data.get("action", "upsert"))
 
-        # Sync — no auth required, version-gated only.
-        # Any client with a newer copy calls this automatically.
         if action == "sync":
             incoming = data.get("updates")
             if not isinstance(incoming, list):
@@ -124,7 +131,6 @@ class Handler(SimpleHTTPRequestHandler):
                     print(f"[sync] rejected v{incoming_v} (have v{current_v})")
             return
 
-        # All other actions require auth.
         if data.get("auth") != _password:
             self._json_response(401, b'{"error":"Unauthorized"}')
             return
@@ -165,10 +171,40 @@ class Handler(SimpleHTTPRequestHandler):
             super().log_message(fmt, *args)
 
 
+class _RedirectHandler(BaseHTTPRequestHandler):
+    """Redirects plain HTTP requests to the HTTPS site."""
+    _https_host = "map.laidler.co.za"
+
+    def do_GET(self):
+        path = self.path.split("?")[0].rstrip("/") or "/"
+        dest = "/" if path in _CAPTIVE_PATHS else self.path
+        self.send_response(302)
+        self.send_header("Location", f"https://{self._https_host}{dest}")
+        self.end_headers()
+
+    def do_POST(self):
+        self.send_response(307)
+        self.send_header("Location", f"https://{self._https_host}{self.path}")
+        self.end_headers()
+
+    def log_message(self, fmt, *args):
+        pass
+
+
+def _serve_in_thread(server):
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    return t
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AfrikaBurn Map Pi server")
-    parser.add_argument("--port", type=int, default=80, help="Port to listen on (default 80)")
+    parser.add_argument("--port", type=int, default=80, help="Port to listen on (default 80, or 443 with SSL)")
     parser.add_argument("--password", default="password", help="Admin password for write API")
+    parser.add_argument("--ssl-cert", help="Path to SSL certificate PEM file")
+    parser.add_argument("--ssl-key", help="Path to SSL private key PEM file")
+    parser.add_argument("--no-http-redirect", action="store_true",
+                        help="With SSL: skip starting the HTTP-to-HTTPS redirect on port 80")
     args = parser.parse_args()
     _password = args.password
 
@@ -176,7 +212,24 @@ if __name__ == "__main__":
         _write_updates([])
         print(f"Created empty {UPDATES_FILE}")
 
-    print(f"Serving on http://0.0.0.0:{args.port}")
-    print(f"Admin password: {args.password}")
-    print(f"Live feed: http://0.0.0.0:{args.port}/schedule-updates.json")
-    HTTPServer(("", args.port), Handler).serve_forever()
+    use_ssl = bool(args.ssl_cert and args.ssl_key)
+
+    if use_ssl:
+        port = args.port if args.port != 80 else 443
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(args.ssl_cert, args.ssl_key)
+        https_server = HTTPServer(("", port), Handler)
+        https_server.socket = context.wrap_socket(https_server.socket, server_side=True)
+
+        if not args.no_http_redirect:
+            redirect_server = HTTPServer(("", 80), _RedirectHandler)
+            _serve_in_thread(redirect_server)
+            print("HTTP redirect running on port 80 → https://burn.map/")
+
+        print(f"Serving HTTPS on https://burn.map/ (port {port})")
+        print(f"Admin password: {args.password}")
+        https_server.serve_forever()
+    else:
+        print(f"Serving HTTP on http://0.0.0.0:{args.port}")
+        print(f"Admin password: {args.password}")
+        HTTPServer(("", args.port), Handler).serve_forever()

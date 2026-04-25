@@ -2044,6 +2044,13 @@
       <h3 class="about-section-title">How to use it</h3>
       <p>Pan and zoom the map, or search by name or code if you already know what you want. Tap a place or event to open its details, use stars for things you want to keep an eye on, and use the schedule filters to narrow the timeline or agenda to the kinds of events you care about.</p>
       <p>You can add your own custom events in the schedule too. Those can be shared between phones with <strong>Share QR</strong> from the event details and imported from the <strong>Scan</strong> button in the schedule.</p>
+      <h3 class="about-section-title">Getting the app at the burn</h3>
+      <p>There <em>may</em> be a map Wi-Fi network at the burn — look for an open network called <strong>"Interactive Map"</strong> (no password) at the <button type="button" class="about-inline-link" data-schedule-help-entry="RFT"><strong>RFT</strong></button> or the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys"><strong>Greasemonkeys workshop</strong></button>. If it is there, connect to it, open your browser, and go to <strong>burn.map</strong>. You can save the app for offline use from there so it keeps working without signal.</p>
+      <p>This network may not be present, may not be running, or may have limited range. Do not rely on it being available.</p>
+      <h3 class="about-section-title">Live updates</h3>
+      <p>If the map Wi-Fi is running and you open the app while connected, it will automatically pull in the latest event times and additions, if there are any. Look for a <strong>live</strong> timestamp at the bottom of the main screen — that tells you how fresh the information is.</p>
+      <p>Events that came in via a live update show a <strong>Live</strong> badge. These may be more reliable than the pre-burn estimates — someone on the ground confirmed them, or got them from <button type="button" class="about-inline-link" data-schedule-help-entry="ART">Arteria</button>. If an event time looks different from what you remember, a live update may have changed it. To get the latest, just connect to the Wi-Fi, open the app or switch back to it, and it will refresh automatically.</p>
+      <p>Live updates may not be available at all, or may stop at any point. Treat them as a bonus, not something to count on.</p>
       <p>Developed by Chris (AKA The Damn Dirty Hippie) from the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys">Greasemonkeys</button>. Feel free to pop by and say hi in person. Feedback, suggestions, or bugs/issues can be sent by <a href="mailto:chris.laidler+ab@gmail.com">e-mail</a>, or find me at the burn, to help improve this or potential future interactive AB maps.</p>
       <p>The <a href="https://bernardbravenboer.github.io/afrikaburnmap-2026/" target="_blank" rel="noopener noreferrer">original interactive map</a> project was created by Bernard from <button type="button" class="about-inline-link" data-about-search="Camp 404">camp 404</button>.</p>
       <p>This is an independent helper tool. There are no guarantees, and some information may still be incomplete or incorrect, but care has been taken to make it as accurate and useful as possible. Live GPS includes a short recent-movement trail. Orientation / heading information is only as accurate as the phone; a mis-calibrated compass can lead to inaccurate heading display.</p>
@@ -2090,6 +2097,24 @@
   </section>
 </div>
 
+<div class="usage-backdrop" id="https-gps-backdrop" aria-hidden="true">
+  <section class="usage-panel" role="dialog" aria-modal="true" aria-labelledby="https-gps-title">
+    <div class="usage-head">
+      <h2 id="https-gps-title">GPS requires a security step</h2>
+    </div>
+    <div class="usage-body">
+      <div class="usage-copy">
+        <p>GPS requires a secure connection. Tap <strong>Open secure version</strong> below — this opens the same map at <strong>burn.map</strong> over a secure connection. Your data stays entirely on the local network and never reaches the internet.</p>
+        <p>The site loads automatically with no warnings. Once open, GPS will work normally — you only need to do this once.</p>
+      </div>
+      <div class="usage-actions" style="gap:10px">
+        <button type="button" class="usage-dismiss" id="https-gps-cancel">Cancel</button>
+        <button type="button" class="usage-dismiss" id="https-gps-proceed" style="background:#1a3a1a;border-color:#3a6a3a;color:#7de38f">Open secure version</button>
+      </div>
+    </div>
+  </section>
+</div>
+
 <div class="about-backdrop" id="schedule-help-backdrop" aria-hidden="true">
   <section class="about-panel schedule-help-panel" role="dialog" aria-modal="true" aria-labelledby="schedule-help-title">
     <div class="about-head">
@@ -2107,6 +2132,10 @@
       <p>There was not much confirmed information available ahead of the burn for major sound cars, some music lineups, or the actual burn schedule itself. Those things tend to become real on site. <button type="button" class="about-inline-link" data-schedule-help-entry="ART">Arteria</button> is one of the main places to get the updated information, and once you have that information you can use the <strong>Add</strong> button here to create your own custom events inside the app.</p>
       <h3>Sharing events</h3>
       <p>Custom events you create can be shared with other people's phones using a QR code. Open the event details and tap <strong>Share QR</strong> — show the code to whoever wants it and they scan it from the <strong>Scan</strong> button at the top of the schedule. The event will appear in their schedule as a personal event. This works completely offline, no Wi-Fi or data needed.</p>
+      <h3>Live updates</h3>
+      <p>There <em>may</em> be a map Wi-Fi network at the burn — look for an open network called <strong>"Interactive Map"</strong> (no password) at the <button type="button" class="about-inline-link" data-schedule-help-entry="RFT">RFT</button> or the <button type="button" class="about-inline-link" data-about-search="Greasemonkeys">Greasemonkeys workshop</button>. This network may not be present or running. If it is there and you connect, the app will automatically pull in the latest event times and additions. Look for a <strong>live</strong> timestamp at the bottom of the main screen — that tells you how fresh the information is.</p>
+      <p>Events that came in via a live update show a <strong>Live</strong> badge. These may be more reliable than the pre-burn estimates — someone on the ground confirmed them, or got them from <button type="button" class="about-inline-link" data-schedule-help-entry="ART">Arteria</button>. If an event time looks different from what you remember seeing before, a live update may have changed it. To get live updates, just connect to the Wi-Fi, open the app or switch back to it, and it will refresh automatically.</p>
+      <p>Live updates may not be available at all, or may stop at any point. Treat them as a bonus, not something to count on.</p>
       <p>The aim of this schedule is to help people find things to do and then go do them. Participation and interaction are one of the main things that make the burn so beautiful, you won't find those in your phone, so says the Damn Dirty Hippie.</p>
     </div>
   </section>
@@ -3738,13 +3767,10 @@
       showPlainMessage("Signed out of live admin.");
       renderSchedule();
     } else {
-      const defaultUrl = liveServerBase || `${location.protocol}//${location.hostname}:8080`;
-      const serverUrl = window.prompt("Live server URL:", defaultUrl) || "";
-      if (!serverUrl) return;
       const pin = window.prompt("Admin password:") || "";
       if (!pin) return;
       closeAbout();
-      const base = serverUrl.replace(/\/$/, "");
+      const base = (liveServerBase || `https://${location.hostname}`).replace(/\/$/, "");
       try {
         const resp = await fetch(`${base}/api/updates`, {
           method: "POST",
@@ -8134,12 +8160,14 @@
   }
 
   function syncGpsStatusAction() {
+    const needsHttps = !window.isSecureContext;
     const canJump = Boolean(currentUserLogicalPoint());
-    gpsStatus.classList.toggle("clickable", canJump);
+    const clickable = canJump || needsHttps;
+    gpsStatus.classList.toggle("clickable", clickable);
     gpsStatus.setAttribute("role", "button");
-    gpsStatus.tabIndex = canJump ? 0 : -1;
-    gpsStatus.setAttribute("aria-disabled", canJump ? "false" : "true");
-    gpsStatus.title = canJump ? "Jump to your current location" : "";
+    gpsStatus.tabIndex = clickable ? 0 : -1;
+    gpsStatus.setAttribute("aria-disabled", clickable ? "false" : "true");
+    gpsStatus.title = needsHttps ? "Tap for GPS setup" : canJump ? "Jump to your current location" : "";
   }
 
   function frameCurrentUserLocation(scaleMultiplier = USER_LOCATION_FRAME_SCALE) {
@@ -8149,12 +8177,36 @@
     return true;
   }
 
+  const httpsGpsBackdrop = document.getElementById("https-gps-backdrop");
+  const httpsGpsProceed = document.getElementById("https-gps-proceed");
+  const httpsGpsCancel = document.getElementById("https-gps-cancel");
+
+  function openHttpsGpsDialog() {
+    httpsGpsBackdrop.classList.add("open");
+    httpsGpsBackdrop.setAttribute("aria-hidden", "false");
+    httpsGpsProceed.focus();
+  }
+  function closeHttpsGpsDialog() {
+    httpsGpsBackdrop.classList.remove("open");
+    httpsGpsBackdrop.setAttribute("aria-hidden", "true");
+  }
+  httpsGpsCancel.addEventListener("click", closeHttpsGpsDialog);
+  httpsGpsProceed.addEventListener("click", () => {
+    closeHttpsGpsDialog();
+    window.open("https://map.laidler.co.za" + window.location.pathname, "_blank");
+  });
+  httpsGpsBackdrop.addEventListener("click", (ev) => {
+    if (ev.target === httpsGpsBackdrop) closeHttpsGpsDialog();
+  });
+
   gpsStatus.addEventListener("click", () => {
+    if (!window.isSecureContext) { openHttpsGpsDialog(); return; }
     frameCurrentUserLocation();
   });
   gpsStatus.addEventListener("keydown", (ev) => {
     if (ev.key !== "Enter" && ev.key !== " ") return;
     ev.preventDefault();
+    if (!window.isSecureContext) { openHttpsGpsDialog(); return; }
     frameCurrentUserLocation();
   });
 
@@ -8318,7 +8370,7 @@
     const debugActive = Boolean(debugUserLogicalPoint);
     if (!debugActive && !navigator.geolocation) {
       hideUserLocation();
-      setGpsStatus("GPS unavailable", "error");
+      setGpsStatus(!window.isSecureContext ? "GPS: tap for GPS ↗" : "GPS unavailable", "error");
       return;
     }
     if (!debugActive && !latestGeoFix) {
@@ -8402,7 +8454,7 @@
       hideUserLocation();
       if (!fLocate.checked) return;
       if (error.code === error.PERMISSION_DENIED) {
-        setGpsStatus("GPS denied", "error");
+        setGpsStatus(!window.isSecureContext ? "GPS: tap for GPS ↗" : "GPS denied", "error");
       } else if (error.code === error.POSITION_UNAVAILABLE) {
         setGpsStatus("GPS unavailable", "error");
       } else if (error.code === error.TIMEOUT) {
