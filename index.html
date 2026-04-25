@@ -1982,6 +1982,7 @@
   <div class="header-title">
     <h1><button type="button" class="title-about-btn" id="about-btn">AfrikaBurn 2026</button></h1>
     <span class="hint hint-title">hover to identify · scroll to zoom · drag to pan</span>
+    <button type="button" class="schedule-btn" id="header-install-btn" style="display:none">Save offline</button>
     <label class="highres-toggle"><input type="checkbox" id="f_highres" checked> high-res</label>
     <label class="gps-toggle"><input type="checkbox" id="f_locate" checked> GPS</label>
     <button type="button" class="schedule-btn" id="schedule-btn">Schedule</button>
@@ -2066,6 +2067,9 @@
             <div id="about-cache-version">Cache version: —</div>
           </div>
           <button type="button" class="about-su-btn" id="live-auth-btn" title="Super user sign in">SU</button>
+        </div>
+        <div class="about-meta-actions">
+          <button type="button" class="about-refresh-btn" id="about-install-btn">Save for offline</button>
         </div>
         <div class="about-meta-actions">
           <button type="button" class="about-refresh-btn" id="about-refresh-btn">Get latest revision</button>
@@ -2258,7 +2262,7 @@
 <script>
 (() => {
   const data = DATA_INLINE;
-  const APP_VERSION = "2026.04.24.2";
+  const APP_VERSION = "2026.04.25.1";
   const CACHE_NAME_PREFIX = "ab-map-";
   async function getInstalledCacheVersion() {
     if (!("caches" in window)) return null;
@@ -8930,6 +8934,20 @@
 <script>
 // PWA: register service worker and offer install.
 (() => {
+  function updateInstallUI() {
+    const cached = Boolean(navigator.serviceWorker && navigator.serviceWorker.controller)
+      || Boolean(localStorage.getItem("ab-map-cached"));
+    const aboutBtn = document.getElementById("about-install-btn");
+    if (aboutBtn) {
+      aboutBtn.textContent = "Save for offline";
+    }
+    const headerBtn = document.getElementById("header-install-btn");
+    if (headerBtn) {
+      headerBtn.style.display = (!cached && "serviceWorker" in navigator) ? "" : "none";
+    }
+  }
+  updateInstallUI();
+
   // Register SW (only on https or localhost)
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
@@ -8941,12 +8959,15 @@
           setTimeout(() => b.classList.remove("show"), 4000);
           localStorage.setItem("ab-map-cached", "1");
         }
+        updateInstallUI();
       }).catch(() => {});
+      navigator.serviceWorker.addEventListener("controllerchange", updateInstallUI);
     });
   }
 
   const banner = document.getElementById("install-banner");
   const btn = document.getElementById("install-btn");
+  const aboutInstallBtn = document.getElementById("about-install-btn");
   const ghost = document.getElementById("install-ghost");
   const iosHelp = document.getElementById("ios-help");
   const iosClose = document.getElementById("ios-help-close");
@@ -8993,7 +9014,7 @@
     deferredPrompt = e;
     showBanner();
   });
-  btn.addEventListener("click", async () => {
+  async function triggerInstall() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
@@ -9019,7 +9040,10 @@
         "<p>Open your browser's menu and choose <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</p>";
       iosHelp.classList.add("show");
     }
-  });
+  }
+  btn.addEventListener("click", triggerInstall);
+  aboutInstallBtn.addEventListener("click", triggerInstall);
+  document.getElementById("header-install-btn")?.addEventListener("click", triggerInstall);
 
   // On iOS there's no beforeinstallprompt, so show the banner after a short delay
   if (isIOS && !isStandalone && !dismissedRecently) {
