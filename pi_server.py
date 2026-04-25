@@ -62,7 +62,31 @@ def _write_updates(updates):
     )
 
 
+# Paths that iOS/Android/Windows use to detect captive portals.
+# We redirect them to the map so the "sign in to network" popup appears.
+_CAPTIVE_PATHS = {
+    "/hotspot-detect.html",          # iOS / macOS
+    "/library/test/success.html",    # iOS older
+    "/generate_204",                 # Android / Chrome
+    "/gen_204",                      # Android alt
+    "/connecttest.txt",              # Windows
+    "/ncsi.txt",                     # Windows alt
+    "/redirect",                     # Android alt
+    "/canonical.html",               # Firefox
+}
+
+
 class Handler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # Captive portal detection: redirect to the map page.
+        path = self.path.split("?")[0].rstrip("/") or "/"
+        if path in _CAPTIVE_PATHS:
+            self.send_response(302)
+            self.send_header("Location", "/")
+            self.end_headers()
+            return
+        super().do_GET()
+
     def do_POST(self):
         if self.path != "/api/updates":
             self.send_error(404)
@@ -143,7 +167,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AfrikaBurn Map Pi server")
-    parser.add_argument("--port", type=int, default=8080, help="Port to listen on (default 8080)")
+    parser.add_argument("--port", type=int, default=80, help="Port to listen on (default 80)")
     parser.add_argument("--password", default="password", help="Admin password for write API")
     args = parser.parse_args()
     _password = args.password
